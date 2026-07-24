@@ -1,0 +1,57 @@
+# Adoption Explorer
+
+Dashboard interactivo de tickets de Adoption (pipeline HubSpot `690980478`).
+Los datos se leen **en vivo** de HubSpot desde el servidor (el token nunca se expone al navegador),
+se refrescan **cada día automáticamente** (cron de Vercel) y con el botón **"Actualizar ahora"**.
+
+Pensado para responder preguntas ad-hoc: filtra por país / segmento / analista / estado /
+mes de creación / SLA, agrupa por cualquier dimensión y exporta a CSV.
+
+## Cómo funciona
+
+- `lib/hubspot.js` — trae y limpia los tickets del pipeline (paginado, `fetch`, token en env var).
+- `lib/store.js` — guarda el snapshot en **Vercel KV** (producción) o en memoria (local / sin KV).
+- `app/api/data` — devuelve el snapshot (lo genera al vuelo la primera vez).
+- `app/api/refresh` — vuelve a jalar HubSpot y regraba el snapshot. Lo dispara el cron y el botón.
+- `app/page.js` — el explorador (filtros + pivote + tabla + CSV + preguntas frecuentes).
+- `proxy.js` — gate por contraseña compartida (si `ADOPTION_PASSWORD` está seteada).
+
+## Correr en local
+
+```bash
+npm install
+# crea .env.local con HUBSPOT_TOKEN (ver .env.local.example)
+npm run dev
+# abre http://localhost:3000
+```
+
+## Deploy a Vercel (compartido con el equipo)
+
+1. Sube esta carpeta a un repo de GitHub (privado).
+2. En Vercel: **Add New → Project → importa el repo**. Framework: Next.js (auto).
+3. En **Settings → Environment Variables** agrega:
+
+   | Variable | Obligatoria | Para qué |
+   |---|---|---|
+   | `HUBSPOT_TOKEN` | ✅ | Token de la private app de HubSpot |
+   | `ADOPTION_PASSWORD` | ✅ (recomendada) | Contraseña que pide el dashboard al equipo |
+   | `REFRESH_SECRET` | opcional | Protege `/api/refresh` de llamadas externas |
+
+4. **Datos persistentes (recomendado):** crea un **Vercel KV** (Storage → KV) y conéctalo al
+   proyecto. Vercel inyecta `KV_REST_API_URL` y `KV_REST_API_TOKEN` solo. Sin KV la app igual
+   funciona, pero cada instancia serverless vuelve a jalar HubSpot en su primera visita.
+5. El **cron diario** ya está en `vercel.json` (`0 11 * * *` UTC ≈ 6am Bogotá → `/api/refresh`).
+6. Deploy. Comparte la URL con el equipo; entran con la contraseña.
+
+## ⚠️ Seguridad — rotar el token
+
+El token de HubSpot estuvo hardcodeado en scripts antiguos (`Hermes/scripts/refresh_data.py`) y en
+`.env.local`. **Recomiendo rotarlo** en HubSpot (crear uno nuevo para la private app) y usar ese
+solo como env var. Nunca lo subas al repo — `.env.local` está en `.gitignore`.
+
+## Notas de datos
+
+- **SLA 1ª atención** = `(fecha_primera_sesion − fecha_de_solicitud) ≤ N días` (N configurable,
+  default 3). Se calcula así porque los campos de SLA nativos de HubSpot vienen vacíos.
+- **Estado**: Abierto = Nuevo/En proceso · Cerrado = Completada/No completada.
+- **Analista**: los 6 del equipo actual; owners históricos caen en "Otro"/"Sin asignar".

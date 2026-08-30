@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import AlegraLogo from '../logo';
 
 export default function Login() {
   const [pw, setPw] = useState('');
@@ -24,9 +25,9 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={submit}>
-        <div className="logo" style={{ marginBottom: 16 }}>A</div>
-        <h1>Adoption Explorer</h1>
-        <p>Dashboard interno de Adoption · Alegra</p>
+        <div className="logo" style={{ marginBottom: 18, justifyContent: 'center' }}><AlegraLogo height={32} /></div>
+        <h1>Adoption</h1>
+        <p>Dashboard interno del equipo de Adoption</p>
         <input
           className="inp" type="password" placeholder="Contraseña del equipo"
           value={pw} onChange={(e) => setPw(e.target.value)} autoFocus

@@ -49,6 +49,21 @@ El token de HubSpot estuvo hardcodeado en scripts antiguos (`Hermes/scripts/refr
 `.env.local`. **Recomiendo rotarlo** en HubSpot (crear uno nuevo para la private app) y usar ese
 solo como env var. Nunca lo subas al repo — `.env.local` está en `.gitignore`.
 
+## Vista "Por Analista" (productividad)
+
+Segunda vista (botón arriba) que mide, por analista, en **enero–junio 2026**:
+- **Efectividad** = tickets llevados a Completada.
+- **Eficiencia** = SLA de 1ª atención.
+- **Productividad** = sesiones dadas (registro Connect).
+
+Doble clic en un analista abre el detalle mes a mes.
+
+Las **sesiones** vienen de `lib/sessions-data.js`, generado desde el CSV *"Registro de Transcripts
+y Grabaciones – Connect"* (export manual del Google Sheet). **No se auto-actualiza con HubSpot.**
+Para refrescarlas: re-exportar el CSV y volver a generar `lib/sessions-data.js` (script node que
+parsea el CSV y agrega por analista/mes: `dadas` = "Asistio", `primeras` = "Sesión 1",
+`noAsistio`, `agendadas`). Se normaliza "Montse Cazares" → "Montserrat Cazares".
+
 ## Notas de datos
 
 - **SLA 1ª atención** = `(fecha_primera_sesion − fecha_de_solicitud) ≤ N días` (N configurable,

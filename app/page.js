@@ -1,5 +1,10 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import AnalistasView from './analistas-view';
+import AlegraLogo from './logo';
+import { useDashData, DashControls, ResumenView, OperacionView, EquipoView } from './dash';
+import { avg1, teamTotals, GLOSARIO, currentYM, monthLabel } from '@/lib/analistas-shared';
+import { enVentana, MES_MINIMO, esVersionOperada } from '@/lib/metrics';
 
 // ─── helpers ───
 const fmtInt = (n) => Math.round(n || 0).toLocaleString('es-MX');
@@ -9,12 +14,13 @@ const HS = (id) => `https://app.hubspot.com/contacts/6180490/record/2-40542822/$
 const todayYMD = () => new Date().toISOString().slice(0, 10);
 const daysSince = (ymd) => { if (!ymd) return null; return Math.floor((Date.now() - new Date(ymd + 'T00:00:00').getTime()) / 86400000); };
 
-// SLA de 1ª atención por ticket
-function slaStatus(r, thr) {
-  if (r.tiene_primera_sesion) return r.dias_primera_sesion <= thr ? 'Cumplió' : 'Incumplió';
-  if (r.estado === 'Cerrado') return 'Sin 1ª sesión';
+// SLA = días entre solicitud y 1ª sesión, por ticket (sin meta/umbral definido aún —
+// se reporta el número, no un cumplió/incumplió).
+function slaCell(r) {
+  if (r.tiene_primera_sesion) return { text: `${r.dias_primera_sesion}d`, tag: 't-b' };
+  if (r.estado === 'Cerrado') return { text: 'Sin sesión', tag: 't-gr' };
   const d = daysSince(r.fecha_solicitud);
-  return d != null && d > thr ? 'Vencido (sin sesión)' : 'En plazo';
+  return { text: d != null ? `esperando ${d}d` : '—', tag: 't-a' };
 }
 
 // Dimensiones para agrupar / filtrar
@@ -37,29 +43,35 @@ const METRICS = [
   { key: 'abiertos', label: '# Abiertos' },
   { key: 'pct_cerrados', label: '% Cerrados' },
   { key: 'mrr', label: 'MRR total' },
-  { key: 'ciclo', label: 'Ciclo mediana (días)' },
-  { key: 'sla', label: 'SLA 1ª atención %' },
+  { key: 'ciclo', label: 'SLA ciclo completo (días promedio)' },
+  { key: 'sla', label: 'SLA 1ª atención (días promedio)' },
 ];
 
-function computeMetrics(recs, thr) {
-  const n = recs.length;
-  const cerrados = recs.filter((r) => r.estado === 'Cerrado').length;
-  const abiertos = n - cerrados;
-  const completados = recs.filter((r) => r.stage === 'Completada').length;
-  const mrr = recs.reduce((s, r) => s + (r.mrr || 0), 0);
-  const ciclos = recs.filter((r) => r.estado === 'Cerrado' && r.dias_a_cierre != null).map((r) => r.dias_a_cierre);
-  const conSesion = recs.filter((r) => r.tiene_primera_sesion);
-  const slaOk = conSesion.filter((r) => r.dias_primera_sesion <= thr).length;
+// Todo sale de lib/metrics.js (definición única). Antes esta vista calculaba el
+// SLA de ciclo como MEDIANA mientras las otras dos usaban PROMEDIO: misma etiqueta,
+// número distinto según la pestaña. Ahora se muestran los dos, etiquetados.
+function computeMetrics(recs) {
+  const t = teamTotals(recs);
+  const cerrados = t.completados + t.no_completados;
   return {
-    count: n,
-    abiertos,
+    count: t.asignados,
+    abiertos: t.abiertos,
     cerrados,
-    completados,
-    pct_cerrados: n ? (cerrados / n) * 100 : 0,
-    mrr,
-    ciclo: median(ciclos),
-    sla: conSesion.length ? (slaOk / conSesion.length) * 100 : null,
-    sla_n: conSesion.length,
+    completados: t.completados,
+    no_completados: t.no_completados,
+    atendidos: t.atendidos,
+    pct_cerrados: t.asignados ? (cerrados / t.asignados) * 100 : 0,
+    tasa: t.tasa,
+    mrr: t.mrrTotal,
+    ciclo: t.cicloAvg,
+    ciclo_med: t.cicloMed,
+    ciclo_n: t.cicloN,
+    sla: t.slaAvg,
+    sla_med: t.slaMed,
+    sla_n: t.slaN,
+    csat: t.csatAvg,
+    csat_n: t.csatN,
+    completadosSinSesion: t.completadosSinSesion,
   };
 }
 
@@ -69,13 +81,15 @@ function metricValue(m, key) {
 }
 function metricFmt(key, v) {
   if (v == null || v === -1) return '—';
-  if (key === 'pct_cerrados' || key === 'sla') return v.toFixed(1) + '%';
+  if (key === 'pct_cerrados') return v.toFixed(1) + '%';
   if (key === 'mrr') return fmtMoney(v);
-  if (key === 'ciclo') return v + 'd';
+  if (key === 'ciclo' || key === 'sla') return v + 'd';
   return fmtInt(v);
 }
 
 const ALL = '__todos__';
+// Vistas que comparten la barra de controles (mes / lente / país / segmento).
+const VISTAS_DASH = ['resumen', 'operacion', 'equipo'];
 
 export default function Page() {
   const [data, setData] = useState(null);
@@ -91,9 +105,34 @@ export default function Page() {
   });
   const [groupBy, setGroupBy] = useState('estado');
   const [metric, setMetric] = useState('count');
-  const [slaThr, setSlaThr] = useState(3);
+  // Una vista por pregunta. Resumen es la de entrada porque es la que cualquiera
+  // entiende sin contexto; el histórico queda como anexo del Equipo.
+  const [view, setView] = useState('resumen'); // resumen | operacion | equipo | explorador | historico
+  // Controles compartidos: se ponen una vez y siguen al usuario entre vistas
+  // (antes cada pestaña tenía sus propios filtros y se borraban al cambiar).
+  const [ctrl, setCtrl] = useState({ mes: currentYM(), pais: ALL, seg: ALL, lente: 'solicitud' });
 
-  useEffect(() => { load(); }, []);
+  // En el build estático (Dashboards Hub) los datos vienen embebidos en el bundle:
+  // no hay servidor al que pedirle nada. Es la MISMA app, solo cambia de dónde
+  // salen los datos — así no existe una segunda versión que se desincronice.
+  const [estatico, setEstatico] = useState(false);
+  useEffect(() => {
+    const emb = typeof window !== 'undefined' ? window.__ADOPTION_DATA__ : null;
+    if (emb) { setData(emb); setEstatico(true); setLoading(false); return; }
+    load();
+  }, []);
+
+  // La vista vive en la URL (?v=equipo), así se puede compartir un enlace directo
+  // a la pestaña que a uno le interesa, y recargar no te devuelve al inicio.
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('v');
+    if (v && ['resumen', 'operacion', 'equipo', 'explorador', 'historico'].includes(v)) setView(v);
+  }, []);
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    u.searchParams.set('v', view);
+    window.history.replaceState(null, '', u);
+  }, [view]);
 
   async function load() {
     setLoading(true); setErr('');
@@ -116,7 +155,25 @@ export default function Page() {
     setRefreshing(false);
   }
 
-  const records = data?.records || [];
+  // El dashboard mira desde enero 2026 en adelante. Lo anterior es de otra época
+  // del proceso y ensuciaba las comparaciones. Se filtra en un solo punto para que
+  // TODAS las vistas hereden la misma ventana.
+  const todos = useMemo(() => (data?.records || []).filter(enVentana), [data]);
+  // El tablero solo mira las 4 versiones que Adoption opera (COL, MEX, RD, CRI).
+  // La lista de tickets con la versión o el segmento mal puestos se genera aparte,
+  // fuera de la app: es material de corrección interno, no del tablero.
+  const records = useMemo(() => todos.filter(esVersionOperada), [todos]);
+
+  // Cálculo compartido por Resumen / Operación / Equipo (una sola vez, no por vista)
+  const dash = useDashData(records, ctrl);
+
+  // Si el mes elegido no existe en los datos (p. ej. al cambiar de lente), se
+  // salta al más reciente que sí exista, para no mostrar una pantalla vacía.
+  useEffect(() => {
+    if (dash.months.length && !dash.months.includes(ctrl.mes)) {
+      setCtrl((c) => ({ ...c, mes: dash.months[0] }));
+    }
+  }, [dash.months, ctrl.mes]);
 
   // valores únicos por dimensión (para los dropdowns)
   const opts = useMemo(() => {
@@ -156,17 +213,17 @@ export default function Page() {
     });
   }, [records, f]);
 
-  const totals = useMemo(() => computeMetrics(filtered, slaThr), [filtered, slaThr]);
+  const totals = useMemo(() => computeMetrics(filtered), [filtered]);
 
   // agrupación (pivote)
   const groups = useMemo(() => {
     if (groupBy === '__none__') return [];
     const map = {};
     filtered.forEach((r) => { const k = r[groupBy] ?? 'Sin dato'; (map[k] = map[k] || []).push(r); });
-    const rows = Object.entries(map).map(([k, recs]) => ({ k, recs, m: computeMetrics(recs, slaThr) }));
+    const rows = Object.entries(map).map(([k, recs]) => ({ k, recs, m: computeMetrics(recs) }));
     rows.sort((a, b) => metricValue(b.m, metric) - metricValue(a.m, metric));
     return rows;
-  }, [filtered, groupBy, metric, slaThr]);
+  }, [filtered, groupBy, metric]);
 
   const maxMetric = Math.max(...groups.map((g) => Math.max(0, metricValue(g.m, metric))), 1);
 
@@ -177,12 +234,15 @@ export default function Page() {
   }
 
   // preguntas frecuentes
+  // El mes más reciente que existe en los datos: antes un atajo decía "junio" con
+  // la fecha fija en el código, así que iba a devolver cero en silencio al pasar el año.
+  const mesReciente = opts.mes[0] || currentYM();
   const PRESETS = [
-    { label: '📅 Contadores creados en junio: abiertos vs cerrados', apply: () => { reset(); setF((p) => ({ ...p, segmento: 'Contador', mes: '2026-06' })); setGroupBy('estado'); setMetric('count'); } },
-    { label: '⏱️ SLA 1ª atención por país', apply: () => { reset(); setGroupBy('pais_label'); setMetric('sla'); } },
+    { label: `📅 Contadores de ${monthLabel(mesReciente)}: abiertos vs cerrados`, apply: () => { reset(); setF((p) => ({ ...p, segmento: 'Contador', mes: mesReciente })); setGroupBy('estado'); setMetric('count'); } },
+    { label: '⏱️ Días a la 1ª sesión, por país', apply: () => { reset(); setGroupBy('pais_label'); setMetric('sla'); } },
     { label: '👥 Tickets abiertos por analista', apply: () => { reset(); setF((p) => ({ ...p, estado: 'Abierto' })); setGroupBy('analista'); setMetric('count'); } },
-    { label: '🔄 Ciclo de cierre por segmento', apply: () => { reset(); setGroupBy('segmento'); setMetric('ciclo'); } },
-    { label: '⏳ Estancados (>30d) por analista', apply: () => { reset(); setF((p) => ({ ...p, soloEstancados: true })); setGroupBy('analista'); setMetric('count'); } },
+    { label: '🔄 Días hasta cerrar, por segmento', apply: () => { reset(); setGroupBy('segmento'); setMetric('ciclo'); } },
+    { label: '⏳ Abiertos hace más de 30 días, por analista', apply: () => { reset(); setF((p) => ({ ...p, soloEstancados: true })); setGroupBy('analista'); setMetric('count'); } },
     { label: '💰 MRR abierto por país', apply: () => { reset(); setF((p) => ({ ...p, estado: 'Abierto' })); setGroupBy('pais_label'); setMetric('mrr'); } },
   ];
 
@@ -200,7 +260,6 @@ export default function Page() {
     a.click(); URL.revokeObjectURL(a.href);
   }
 
-  const slaTag = (s) => s === 'Cumplió' ? 't-g' : s === 'Incumplió' || s === 'Vencido (sin sesión)' ? 't-r' : s === 'En plazo' ? 't-a' : 't-gr';
   const estadoTag = (s) => s === 'Cerrado' ? 't-g' : 't-a';
 
   const lastUpd = data?.refreshed_at ? new Date(data.refreshed_at).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -210,27 +269,63 @@ export default function Page() {
       <header className="hdr">
         <div className="hdr-inner">
           <div className="hdr-l">
-            <div className="logo">A</div>
+            <div className="logo"><AlegraLogo /></div>
+            <div className="hdr-div" />
             <div>
-              <div className="hdr-title">Adoption Explorer</div>
-              <div className="hdr-sub">HubSpot en vivo · pipeline 690980478 · Actualizado: {lastUpd}</div>
+              <div className="hdr-title">Adoption</div>
+              <div className="hdr-sub">
+                {estatico ? 'Datos de HubSpot al' : 'Datos en vivo de HubSpot · actualizado'} {lastUpd}
+              </div>
             </div>
           </div>
           <div className="hdr-r">
             <span className="pill">📊 {fmtInt(records.length)} tickets</span>
-            <button className="btn" onClick={() => { const el = document.documentElement; el.dataset.theme = el.dataset.theme === 'dark' ? 'light' : 'dark'; }}>🌓 Tema</button>
-            <button className="btn btn-primary" onClick={refresh} disabled={refreshing}>
-              {refreshing ? <span className="spin" /> : '🔄'} Actualizar ahora
-            </button>
+            <button className="btn" title="Cambiar entre modo claro y oscuro" onClick={() => {
+              const el = document.documentElement;
+              const next = el.dataset.theme === 'dark' ? 'light' : 'dark';
+              el.dataset.theme = next;
+              try { localStorage.setItem('ae_theme', next); } catch {}
+            }}>🌓 Tema</button>
+            {/* En el build estático no hay a quién pedirle un refresh: los datos se
+                regeneran solos cada mañana y el Hub se actualiza con el push. */}
+            {!estatico && (
+              <button className="btn btn-primary" onClick={refresh} disabled={refreshing}>
+                {refreshing ? <span className="spin" /> : '🔄'} Actualizar ahora
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="main">
+      <main className="main" style={{ opacity: refreshing ? 0.55 : 1, transition: 'opacity .2s', pointerEvents: refreshing ? 'none' : 'auto' }}>
         {err && <div className="panel" style={{ borderColor: 'var(--rbrd)', background: 'var(--rbg)' }}><div className="panel-bd" style={{ color: 'var(--r)' }}>⚠️ {err}</div></div>}
-        {loading && <div className="panel"><div className="panel-bd muted">Cargando datos de HubSpot… (la primera carga puede tardar unos segundos)</div></div>}
+        {loading && !data && <div className="panel"><div className="panel-bd muted">Cargando datos de HubSpot… (la primera carga puede tardar unos segundos)</div></div>}
 
-        {!loading && data && (
+        {data && (
+          <div className="vtabs">
+            <button className={'vtab' + (view === 'resumen' ? ' active' : '')} onClick={() => setView('resumen')} title="¿Vamos bien? Lo esencial del mes en 10 segundos">📊 Resumen</button>
+            <button className={'vtab' + (view === 'operacion' ? ' active' : '')} onClick={() => setView('operacion')} title="¿Dónde se están atorando los clientes?">🚦 Operación</button>
+            <button className={'vtab' + (view === 'equipo' ? ' active' : '')} onClick={() => setView('equipo')} title="¿Cómo va cada analista y quién necesita apoyo?">👥 Equipo</button>
+            <button className={'vtab' + (view === 'explorador' ? ' active' : '')} onClick={() => setView('explorador')} title="Preguntas libres sobre cualquier ticket">🔎 Explorador</button>
+            <button className={'vtab' + (view === 'historico' ? ' active' : '')} onClick={() => setView('historico')} title="Histórico mes a mes con las sesiones del registro Connect">🗂️ Histórico</button>
+          </div>
+        )}
+
+        {data && VISTAS_DASH.includes(view) && (
+          <>
+            <DashControls ctrl={{ ...ctrl, setMes: (m) => setCtrl((c) => ({ ...c, mes: m })) }} setCtrl={setCtrl}
+              months={dash.months} paisOpts={dash.paisOpts} segOpts={dash.segOpts} hasFilter={dash.hasFilter} />
+            {view === 'resumen' && <ResumenView d={dash} ctrl={{ ...ctrl, setMes: (m) => setCtrl((c) => ({ ...c, mes: m })) }} onNavigate={setView} />}
+            {view === 'operacion' && <OperacionView d={dash} ctrl={ctrl} />}
+            {view === 'equipo' && <EquipoView d={dash} ctrl={ctrl} onVerHistorial={() => setView('historico')} />}
+          </>
+        )}
+
+        {data && view === 'historico' && (
+          <AnalistasView records={records} />
+        )}
+
+        {data && view === 'explorador' && (
           <>
             {/* Preguntas frecuentes */}
             <div className="panel">
@@ -242,78 +337,94 @@ export default function Page() {
 
             {/* KPIs de la selección */}
             <div className="kpi-row">
-              <div className="kpi k-blue"><div className="kpi-lbl">Tickets (selección)</div><div className="kpi-num">{fmtInt(totals.count)}</div><div className="kpi-sub">de {fmtInt(records.length)} totales</div></div>
-              <div className="kpi k-ok"><div className="kpi-lbl">Cerrados</div><div className="kpi-num">{fmtInt(totals.cerrados)}</div><div className="kpi-sub">{totals.pct_cerrados.toFixed(1)}% · {fmtInt(totals.completados)} completados</div></div>
-              <div className="kpi k-warn"><div className="kpi-lbl">Abiertos</div><div className="kpi-num">{fmtInt(totals.abiertos)}</div><div className="kpi-sub">en proceso o nuevos</div></div>
-              <div className="kpi"><div className="kpi-lbl">SLA 1ª atención</div><div className="kpi-num">{totals.sla == null ? '—' : totals.sla.toFixed(0) + '%'}</div><div className="kpi-sub">≤{slaThr}d · n={fmtInt(totals.sla_n)}</div></div>
-              <div className="kpi k-purple"><div className="kpi-lbl">Ciclo cierre (mediana)</div><div className="kpi-num">{totals.ciclo == null ? '—' : totals.ciclo + 'd'}</div><div className="kpi-sub">solicitud → cierre</div></div>
-              <div className="kpi k-ok"><div className="kpi-lbl">MRR (selección)</div><div className="kpi-num" style={{ fontSize: 22 }}>{fmtMoney(totals.mrr)}</div><div className="kpi-sub">suma de la selección</div></div>
+              <div className="kpi k-blue" title={GLOSARIO.BOP}><div className="kpi-lbl">Tickets (selección)</div><div className="kpi-num">{fmtInt(totals.count)}</div><div className="kpi-sub">de {fmtInt(records.length)} totales</div></div>
+              <div className="kpi k-ok" title={GLOSARIO.completado}><div className="kpi-lbl">Completados</div><div className="kpi-num">{fmtInt(totals.completados)}</div><div className="kpi-sub">{totals.tasa.toFixed(0)}% de éxito · {fmtInt(totals.no_completados)} no completadas</div></div>
+              <div className="kpi k-warn"><div className="kpi-lbl">Abiertos</div><div className="kpi-num">{fmtInt(totals.abiertos)}</div><div className="kpi-sub">nuevos o en proceso</div></div>
+              <div className="kpi" title={GLOSARIO['SLA 1ª atención']}><div className="kpi-lbl">SLA · 1ª atención</div><div className="kpi-num">{totals.sla == null ? '—' : totals.sla + 'd'}</div><div className="kpi-sub">prom. · mediana {totals.sla_med == null ? '—' : totals.sla_med + 'd'} · n={fmtInt(totals.sla_n)}</div></div>
+              <div className="kpi k-purple" title={GLOSARIO['SLA ciclo completo']}><div className="kpi-lbl">SLA · ciclo completo</div><div className="kpi-num">{totals.ciclo == null ? '—' : totals.ciclo + 'd'}</div><div className="kpi-sub">prom. · mediana {totals.ciclo_med == null ? '—' : totals.ciclo_med + 'd'} · n={fmtInt(totals.ciclo_n)}</div></div>
+              <div className="kpi k-ok" title={GLOSARIO.CSAT}><div className="kpi-lbl">CSAT</div><div className="kpi-num">{totals.csat == null ? '—' : totals.csat}</div><div className="kpi-sub">{totals.csat_n ? `promedio · n=${fmtInt(totals.csat_n)}` : 'sin respuestas en la selección'}</div></div>
+              <div className="kpi" title={GLOSARIO.MRR}><div className="kpi-lbl">MRR (selección)</div><div className="kpi-num" style={{ fontSize: 22 }}>{totals.mrr == null ? '—' : fmtMoney(totals.mrr)}</div><div className="kpi-sub">suma de la selección</div></div>
             </div>
 
             {/* Filtros */}
             <div className="panel">
               <div className="panel-hd">
-                <div><div className="stitle">Filtros</div><div className="ssub">Segmenta la data. Todo lo demás se recalcula al instante.</div></div>
+                <div><div className="stitle">Acota la búsqueda</div><div className="ssub">Todo lo de abajo se recalcula al instante.</div></div>
                 <button className="btn" onClick={reset}>✕ Limpiar filtros</button>
               </div>
               <div className="panel-bd filters">
+                <div className="fg"><label>Buscar cliente o ID</label><input className="inp" value={f.q} onChange={(e) => setFilter('q', e.target.value)} placeholder="Nombre del cliente o número de ticket…" /></div>
                 <Sel label="País" val={f.pais} set={(v) => setFilter('pais', v)} opts={opts.pais} />
                 <Sel label="Segmento" val={f.segmento} set={(v) => setFilter('segmento', v)} opts={opts.segmento} />
                 <Sel label="Analista" val={f.analista} set={(v) => setFilter('analista', v)} opts={opts.analista} />
-                <Sel label="Estado" val={f.estado} set={(v) => setFilter('estado', v)} opts={['Abierto', 'Cerrado']} />
-                <Sel label="Etapa (stage)" val={f.stage} set={(v) => setFilter('stage', v)} opts={opts.stage} />
-                <Sel label="ICP" val={f.icp} set={(v) => setFilter('icp', v)} opts={opts.icp} />
-                <Sel label="Es pago" val={f.es_pago} set={(v) => setFilter('es_pago', v)} opts={opts.es_pago} />
-                <Sel label="Fuente" val={f.fuente} set={(v) => setFilter('fuente', v)} opts={opts.fuente} />
-                <Sel label="Tipo migración" val={f.tipo} set={(v) => setFilter('tipo', v)} opts={opts.tipo} />
+                <Sel label="Etapa" val={f.stage} set={(v) => setFilter('stage', v)} opts={opts.stage} />
                 <Sel label="Mes de creación" val={f.mes} set={(v) => setFilter('mes', v)} opts={opts.mes} />
-                <div className="fg"><label>Creado entre</label><div className="row2">
-                  <input className="inp" type="date" value={f.desde} onChange={(e) => setFilter('desde', e.target.value)} />
-                  <input className="inp" type="date" value={f.hasta} onChange={(e) => setFilter('hasta', e.target.value)} />
-                </div></div>
-                <div className="fg"><label>Buscar (cliente / ID)</label><input className="inp" value={f.q} onChange={(e) => setFilter('q', e.target.value)} placeholder="Nombre o ID…" /></div>
-                <div className="fg"><label>SLA objetivo (días)</label><input className="inp" type="number" min="1" value={slaThr} onChange={(e) => setSlaThr(Math.max(1, +e.target.value || 1))} /></div>
-                <div className="fg"><label>Solo estancados (&gt;30d)</label>
-                  <button className={'chip' + (f.soloEstancados ? ' active' : '')} onClick={() => setFilter('soloEstancados', !f.soloEstancados)}>{f.soloEstancados ? '✓ Activado' : 'Desactivado'}</button>
+                <div className="fg"><label title={GLOSARIO.estancado}>Solo los estancados</label>
+                  <button className={'chip' + (f.soloEstancados ? ' active' : '')} title="Tickets abiertos hace más de 30 días" onClick={() => setFilter('soloEstancados', !f.soloEstancados)}>{f.soloEstancados ? '✓ Abiertos +30d' : 'Todos'}</button>
                 </div>
               </div>
+              {/* Los filtros de uso ocasional van plegados: antes eran 13 a la vista
+                  y el panel ocupaba más pantalla que los datos. */}
+              <details className="mas-filtros">
+                <summary>Más filtros</summary>
+                <div className="panel-bd filters" style={{ paddingTop: 0 }}>
+                  <Sel label="Abierto / Cerrado" val={f.estado} set={(v) => setFilter('estado', v)} opts={['Abierto', 'Cerrado']} />
+                  <Sel label="ICP" val={f.icp} set={(v) => setFilter('icp', v)} opts={opts.icp} />
+                  <Sel label="Es pago" val={f.es_pago} set={(v) => setFilter('es_pago', v)} opts={opts.es_pago} />
+                  <Sel label="Fuente de migración" val={f.fuente} set={(v) => setFilter('fuente', v)} opts={opts.fuente} />
+                  <Sel label="Tipo de migración" val={f.tipo} set={(v) => setFilter('tipo', v)} opts={opts.tipo} />
+                  <div className="fg"><label>Creado entre estas fechas</label><div className="row2">
+                    <input className="inp" type="date" value={f.desde} onChange={(e) => setFilter('desde', e.target.value)} />
+                    <input className="inp" type="date" value={f.hasta} onChange={(e) => setFilter('hasta', e.target.value)} />
+                  </div></div>
+                </div>
+              </details>
             </div>
 
             {/* Pivote por dimensión */}
             <div className="panel">
               <div className="panel-hd">
-                <div><div className="stitle">Análisis por dimensión</div><div className="ssub">Agrupa la selección por cualquier campo y compara métricas.</div></div>
+                <div><div className="stitle">Compara grupos entre sí</div><div className="ssub">Parte la selección por el campo que elijas y ordena por la métrica que te interese.</div></div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <select className="inp" style={{ width: 'auto' }} value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
                     <option value="__none__">Sin agrupar</option>
                     {DIMS.map((d) => <option key={d.key} value={d.key}>Agrupar por: {d.label}</option>)}
                   </select>
                   <select className="inp" style={{ width: 'auto' }} value={metric} onChange={(e) => setMetric(e.target.value)}>
-                    {METRICS.map((m) => <option key={m.key} value={m.key}>Ordenar/barra: {m.label}</option>)}
+                    {METRICS.map((m) => <option key={m.key} value={m.key}>Ordenar por: {m.label}</option>)}
                   </select>
                 </div>
               </div>
               <div className="panel-bd">
-                {groupBy === '__none__' ? <div className="hint">Elige una dimensión para ver el desglose.</div> : (
+                {groupBy === '__none__' ? <div className="hint">Elige un campo arriba para ver el desglose.</div> : groups.length === 0 ? (
+                  <div className="muted">No hay tickets con los filtros actuales. Prueba a limpiar alguno.</div>
+                ) : (
                   <div className="tbl-scroll"><table>
                     <thead><tr>
                       <th>{DIMS.find((d) => d.key === groupBy)?.label}</th>
-                      <th className="tr"># Tickets</th><th className="tr">Cerrados</th><th className="tr">Abiertos</th>
-                      <th className="tr">% Cerr.</th><th className="tr">MRR</th><th className="tr">Ciclo med.</th><th className="tr">SLA%</th>
-                      <th style={{ width: '30%' }}>{METRICS.find((m) => m.key === metric)?.label}</th>
+                      <th className="tr">Tickets</th>
+                      <th className="tr" title={GLOSARIO.completado}>Completados</th>
+                      <th className="tr">No completados</th>
+                      <th className="tr">Abiertos</th>
+                      <th className="tr" title={GLOSARIO.exito}>% éxito</th>
+                      <th className="tr" title={GLOSARIO.MRR}>MRR</th>
+                      <th className="tr" title={GLOSARIO['SLA 1ª atención']}>Días a 1ª sesión</th>
+                      <th className="tr" title={GLOSARIO['SLA ciclo completo']}>Días a cerrar</th>
+                      <th style={{ width: '24%' }} title="Barra comparativa de la métrica por la que estás ordenando">Comparación · {METRICS.find((m) => m.key === metric)?.label}</th>
                     </tr></thead>
                     <tbody>{groups.map((g) => {
                       const v = metricValue(g.m, metric);
                       const w = v > 0 ? (v / maxMetric) * 100 : 0;
                       return <tr key={g.k}>
-                        <td style={{ fontWeight: 700 }}>{g.k}</td>
+                        <td style={{ fontWeight: 700 }}>{g.k || '(vacío)'}</td>
                         <td className="tr">{fmtInt(g.m.count)}</td>
-                        <td className="tr" style={{ color: 'var(--g)' }}>{fmtInt(g.m.cerrados)}</td>
+                        <td className="tr" style={{ color: 'var(--g)', fontWeight: 700 }}>{fmtInt(g.m.completados)}</td>
+                        <td className="tr" style={{ color: 'var(--r)' }}>{fmtInt(g.m.no_completados)}</td>
                         <td className="tr" style={{ color: 'var(--a)' }}>{fmtInt(g.m.abiertos)}</td>
-                        <td className="tr">{g.m.pct_cerrados.toFixed(0)}%</td>
-                        <td className="tr">{fmtMoney(g.m.mrr)}</td>
+                        <td className="tr">{g.m.atendidos ? g.m.tasa.toFixed(0) + '%' : '—'}</td>
+                        <td className="tr">{g.m.mrr == null ? '—' : fmtMoney(g.m.mrr)}</td>
+                        <td className="tr">{g.m.sla == null ? '—' : g.m.sla + 'd'}</td>
                         <td className="tr">{g.m.ciclo == null ? '—' : g.m.ciclo + 'd'}</td>
-                        <td className="tr">{g.m.sla == null ? '—' : g.m.sla.toFixed(0) + '%'}</td>
                         <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div className="gbar-track" style={{ flex: 1 }}><div className="gbar-fill" style={{ width: w + '%' }} /></div>
                           <div className="gbar-val">{metricFmt(metric, g.m[metric])}</div>
@@ -328,36 +439,46 @@ export default function Page() {
             {/* Detalle de tickets */}
             <div className="panel">
               <div className="panel-hd">
-                <div><div className="stitle">Tickets ({fmtInt(filtered.length)})</div><div className="ssub">Detalle de la selección {filtered.length > 300 ? '· mostrando los primeros 300' : ''}</div></div>
+                <div><div className="stitle">Los tickets, uno por uno ({fmtInt(filtered.length)})</div><div className="ssub">Clic en el ID para abrirlo en HubSpot{filtered.length > 300 ? ' · en pantalla van los primeros 300, el CSV trae todos' : ''}</div></div>
                 <button className="btn btn-primary" onClick={exportCSV}>📥 Descargar CSV ({fmtInt(filtered.length)})</button>
               </div>
+              {filtered.length === 0 ? (
+                <div className="panel-bd muted">No hay ningún ticket con estos filtros. Prueba a quitar alguno o usa «✕ Limpiar filtros».</div>
+              ) : (
               <div className="tbl-scroll"><table>
                 <thead><tr>
-                  <th>ID</th><th>Creado</th><th>Estado</th><th>Etapa</th><th>País</th><th>Segmento</th><th>Analista</th>
-                  <th className="tr">MRR</th><th className="tc">Días 1ª ses.</th><th className="tc">SLA</th><th className="tr">Ciclo</th><th>Cliente</th>
+                  <th>ID</th><th>Creado</th><th>Etapa</th><th>País</th><th>Segmento</th><th>Analista</th>
+                  <th className="tr" title={GLOSARIO.MRR}>MRR</th>
+                  <th className="tc" title={GLOSARIO['SLA 1ª atención']}>Días a 1ª sesión</th>
+                  <th className="tr" title={GLOSARIO['SLA ciclo completo']}>Días a cerrar</th>
+                  <th className="tc" title="Resultado de la 1ª sesión según HubSpot">1ª sesión</th>
+                  <th>Cliente</th>
                 </tr></thead>
                 <tbody>{filtered.slice(0, 300).map((r) => {
-                  const sla = slaStatus(r, slaThr);
+                  const sla = slaCell(r);
                   return <tr key={r.id}>
                     <td><a href={HS(r.id)} target="_blank" rel="noreferrer" style={{ fontFamily: 'monospace', fontSize: 12 }}>{r.id}</a></td>
-                    <td>{r.fecha_solicitud || '—'}</td>
-                    <td><span className={'tag ' + estadoTag(r.estado)}>{r.estado}</span></td>
-                    <td>{r.stage}</td>
+                    <td title={r.sin_fecha_solicitud ? 'Sin fecha de solicitud en HubSpot: se usa la fecha de creación del ticket' : ''}>{r.fecha_solicitud || '—'}{r.sin_fecha_solicitud && <span style={{ color: 'var(--a)' }}> *</span>}</td>
+                    <td><span className={'tag ' + estadoTag(r.estado)}>{r.stage}</span></td>
                     <td>{r.pais_label}</td>
                     <td>{r.segmento}</td>
                     <td>{r.analista}</td>
-                    <td className="tr">{r.mrr ? fmtMoney(r.mrr) : '—'}</td>
-                    <td className="tc">{r.dias_primera_sesion == null ? '—' : r.dias_primera_sesion + 'd'}</td>
-                    <td className="tc"><span className={'tag ' + slaTag(sla)}>{sla}</span></td>
+                    <td className="tr">{r.mrr == null ? '—' : fmtMoney(r.mrr)}</td>
+                    <td className="tc"><span className={'tag ' + sla.tag}>{sla.text}</span></td>
                     <td className="tr">{r.dias_a_cierre == null ? '—' : r.dias_a_cierre + 'd'}</td>
+                    <td className="tc">{r.resultado_primera_sesion ? <span className={'tag ' + (r.no_show ? 't-r' : 't-gr')}>{r.resultado_primera_sesion}</span> : '—'}</td>
                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.cliente || '—'}</td>
                   </tr>;
                 })}</tbody>
               </table></div>
+              )}
+              <div className="panel-bd hint">* fecha tomada de la creación del ticket porque falta la fecha de solicitud en HubSpot.</div>
             </div>
           </>
         )}
-        <div className="ftr">Adoption Explorer · Alegra · datos en vivo de HubSpot · SLA 1ª atención = (1ª sesión − solicitud) ≤ {slaThr}d</div>
+        <div className="ftr">
+          Adoption · Alegra · datos en vivo de HubSpot · solo COL, MEX, RD y CRI · «días a 1ª sesión» = desde la solicitud hasta la primera sesión · «días a cerrar» = desde la solicitud hasta el cierre. Todavía no hay una meta de SLA definida, por eso se muestran días y no un % de cumplimiento.
+        </div>
       </main>
     </>
   );

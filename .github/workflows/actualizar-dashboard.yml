@@ -1,0 +1,70 @@
+# Regenera el dashboard con los datos frescos de HubSpot y lo publica.
+#
+# Cada push a main hace que Dashboards Hub actualice el tablero automáticamente,
+# así que con que este workflow commitee el index.html, el Hub queda al día solo.
+#
+# Requiere un secreto del repo:  HUBSPOT_TOKEN
+#   Settings → Secrets and variables → Actions → New repository secret
+name: Actualizar dashboard
+
+on:
+  schedule:
+    # 11:00 UTC = 6:00 a.m. en Bogotá / 5:00 a.m. en Ciudad de México
+    - cron: '0 11 * * *'
+  workflow_dispatch:        # botón para correrlo a mano cuando quieras
+  push:
+    branches: [main]
+    # Si cambia el código del tablero, se regenera el HTML en el mismo push.
+    # Se ignora el propio index.html para no entrar en un bucle de commits.
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'scripts/build-static.mjs'
+      - '.github/workflows/actualizar-dashboard.yml'
+
+# Necesario para que el workflow pueda commitear el HTML regenerado
+permissions:
+  contents: write
+
+# Si se dispara dos veces seguidas, que la nueva cancele a la anterior
+concurrency:
+  group: actualizar-dashboard
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar el dashboard
+        env:
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+        run: |
+          if [ -z "$HUBSPOT_TOKEN" ]; then
+            echo "::error::Falta el secreto HUBSPOT_TOKEN. Agrégalo en Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          node scripts/build-static.mjs
+          cp dist-hub/index.html index.html
+
+      - name: Publicar si cambió
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --staged --quiet; then
+            echo "Sin cambios en los datos, no hay nada que publicar."
+          else
+            git commit -m "Datos al $(TZ=America/Bogota date '+%Y-%m-%d %H:%M') (automático)"
+            git push
+            echo "Publicado. Dashboards Hub se actualiza con este push."
+          fi

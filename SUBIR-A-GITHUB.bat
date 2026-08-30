@@ -9,25 +9,51 @@ echo   SUBIR EL DASHBOARD DE ADOPTION A GITHUB
 echo   destino: Alegra-Team/Adoption-dashboard
 echo ============================================================
 echo.
-echo   Si es la primera vez, se va a abrir una ventana del
-echo   navegador para que inicies sesion en GitHub. Es normal.
+echo   Si es la primera vez, se abrira una ventana del navegador
+echo   para que inicies sesion en GitHub. Es normal.
 echo.
 pause
 echo.
 
-echo [1/3] Revisando que este todo guardado...
-git add -A >nul 2>&1
+echo [1/4] Viendo que hay en GitHub...
+git fetch hub main
+if errorlevel 1 (
+  echo.
+  echo   No se pudo conectar con GitHub. Revisa tu internet
+  echo   o el inicio de sesion, y vuelve a intentar.
+  echo.
+  pause
+  exit /b 1
+)
+echo       Listo.
+echo.
+
+echo [2/4] Sincronizando...
+echo       ^(si el robot de actualizacion subio algo, se respeta
+echo        el historial y tus archivos quedan encima^)
+git reset --soft FETCH_HEAD
+echo       Listo.
+echo.
+
+echo [3/4] Guardando los cambios...
+git add -A
 git diff --staged --quiet
 if errorlevel 1 (
-  echo       Habia cambios sin guardar, los guardo...
-  git -c user.name="Jhonatan Grajales" -c user.email="jhonatan.grajales@alegra.com" commit -q -m "Actualizacion del dashboard"
-  echo       Listo.
+  git -c user.name="Jhonatan Grajales" -c user.email="jhonatan.grajales@alegra.com" commit -q -m "Actualizacion del dashboard de Adoption"
+  echo       Guardado.
 ) else (
-  echo       Todo estaba guardado.
+  echo       No habia nada nuevo que guardar.
+  echo.
+  echo   ============================================================
+  echo     GITHUB YA ESTA AL DIA - no hay nada que subir
+  echo   ============================================================
+  echo.
+  pause
+  exit /b 0
 )
 echo.
 
-echo [2/3] Subiendo a GitHub...
+echo [4/4] Subiendo a GitHub...
 echo.
 git push hub main
 echo.
@@ -39,35 +65,15 @@ if errorlevel 1 (
   echo.
   echo   Copia el mensaje de error de arriba y pasamelo.
   echo.
-  echo   Causas mas comunes:
-  echo     - No tienes permiso de escritura en Alegra-Team
-  echo     - Cancelaste el inicio de sesion de GitHub
-  echo     - El repositorio ya tiene contenido ^(ver abajo^)
-  echo.
-  echo   Si dice "rejected" o "non-fast-forward", el repo
-  echo   ya traia archivos. Avisame y lo resuelvo.
-  echo.
 ) else (
   echo ============================================================
-  echo   LISTO - EL CODIGO YA ESTA EN GITHUB
+  echo   LISTO - YA ESTA EN GITHUB
   echo ============================================================
   echo.
   echo   https://github.com/Alegra-Team/Adoption-dashboard
   echo.
-  echo   AHORA FALTAN 3 PASOS EN EL NAVEGADOR:
-  echo.
-  echo   1. Guardar el token de HubSpot
-  echo      En el repo: Settings ^> Secrets and variables ^> Actions
-  echo      ^> New repository secret
-  echo        Nombre: HUBSPOT_TOKEN
-  echo        Valor:  el token que esta en tu archivo .env.local
-  echo.
-  echo   2. Conectar el repo en Dashboards Hub
-  echo      Elegir "Adoption-dashboard" y dar Update access
-  echo.
-  echo   3. Probar la actualizacion automatica
-  echo      En el repo: pestana Actions ^> "Actualizar dashboard"
-  echo      ^> boton "Run workflow"
+  echo   Ahora entra a Dashboards Hub y recarga la pagina
+  echo   del dashboard. Deberia mostrarse.
   echo.
 )
 

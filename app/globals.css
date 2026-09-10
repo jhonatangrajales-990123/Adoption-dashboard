@@ -368,3 +368,123 @@ tbody tr:hover td{background:var(--surface2);}
 .funnel-cierre{margin-top:14px;padding-top:13px;border-top:1px solid var(--brd2);font-size:13.5px;color:var(--t2);line-height:1.6;}
 .funnel-cierre b{color:var(--t1);}
 @media(max-width:720px){.funnel-lbl{width:120px;font-size:12px}.funnel-gap{margin-left:134px;gap:8px}}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v2 · Pestañas agrupadas, portada resumida y las dos vistas nuevas
+   (Desempeño y Activación).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Pestañas en dos grupos con etiqueta ───────────────────────────────────
+   Siete pestañas en fila plana obligan a abrirlas todas para saber cuál es la
+   tuya. Agrupadas por "quién la abre", el lector se ubica sin hacer clic. */
+.vtabs{flex-wrap:wrap;align-items:stretch;}
+.vtab-grupo{display:flex;align-items:center;gap:8px;}
+.vtab-grupo-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--t3);padding:0 4px 0 6px;white-space:nowrap;}
+.vtab-grupo-tabs{display:inline-flex;gap:4px;}
+.vtab-sep{width:1px;align-self:stretch;background:var(--brd);margin:2px 8px 2px 10px;}
+.vista-hint{font-size:12.5px;color:var(--t3);margin:-4px 0 2px 2px;}
+
+/* ─── Portada: dos mini gráficas de tendencia y los accesos a fondo ───────── */
+.mini-trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;}
+
+.cta-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;}
+.cta-card{display:flex;align-items:center;gap:14px;text-align:left;width:100%;
+  background:var(--surface);border:1px solid var(--brd);border-left:4px solid var(--brand);
+  border-radius:var(--rad);padding:16px 18px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.cta-card:hover{border-color:var(--brand-brd);border-left-color:var(--brand);box-shadow:var(--sh);}
+.cta-icon{font-size:24px;line-height:1;flex-shrink:0;}
+.cta-txt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;}
+.cta-txt b{font-size:14.5px;font-weight:700;color:var(--t1);}
+.cta-txt small{font-size:12px;color:var(--t3);line-height:1.45;}
+.cta-flecha{font-size:18px;color:var(--brand);flex-shrink:0;}
+
+/* ─── Desempeño · tarjetas "antes → ahora" ─────────────────────────────────
+   Un número solo no dice si vamos bien. Estas siempre muestran el par. */
+.cmp-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:12px;}
+.cmp-card{background:var(--surface);border:1px solid var(--brd);border-radius:var(--rad);padding:14px 16px;}
+.cmp-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);}
+.cmp-vals{display:flex;align-items:baseline;gap:8px;margin:8px 0 2px;flex-wrap:wrap;}
+.cmp-antes{font-size:17px;font-weight:600;color:var(--t3);}
+.cmp-flecha{font-size:13px;color:var(--t3);}
+.cmp-ahora{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--t1);}
+.cmp-delta{font-size:12px;font-weight:700;color:var(--t3);}
+.cmp-hint{font-size:11px;color:var(--t3);margin-top:7px;line-height:1.45;}
+
+.titular-flecha{color:var(--brand);font-weight:700;}
+.titular-sub{font-size:14px !important;color:var(--t2) !important;margin-top:10px;}
+.seccion-sub{font-size:12.5px;color:var(--t3);margin:-2px 0 -4px;line-height:1.5;max-width:88ch;}
+
+/* ─── Desempeño · barras de volumen mes a mes ─────────────────────────────── */
+.vol-bars{display:flex;align-items:flex-end;gap:10px;min-height:200px;overflow-x:auto;padding-bottom:4px;}
+.vol-col{flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
+.vol-num{font-size:12px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;}
+.vol-track{width:100%;height:150px;display:flex;align-items:flex-end;}
+.vol-fill{width:100%;background:var(--surface3);border:1px solid var(--brd);border-bottom:0;border-radius:4px 4px 0 0;
+  display:flex;align-items:flex-end;overflow:hidden;min-height:3px;}
+.vol-fill-ok{width:100%;background:var(--g);opacity:1;border-radius:4px 4px 0 0;}
+.vol-mes{font-size:11px;color:var(--t3);font-weight:600;white-space:nowrap;}
+.vol-mes-nuevo{color:var(--a);}
+.vol-tag{position:absolute;top:-2px;right:2px;font-size:11px;}
+
+/* ─── Activación · tarjetas SaaS con su procedencia siempre a la vista ─────
+   La nota de origen no es letra chica opcional: una métrica SaaS sin decir de
+   qué dato sale es exactamente lo que hace que un tablero pierda credibilidad
+   en la primera pregunta difícil. */
+.saas-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:12px;}
+.saas-card{background:var(--surface);border:1px solid var(--brd);border-radius:var(--rad);
+  padding:16px 18px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.saas-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brand);}
+.saas-card.k-blue::before{background:var(--blue);}
+.saas-card.k-ok::before{background:var(--g);}
+.saas-card.k-warn::before{background:var(--a);}
+.saas-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);}
+.saas-val{font-size:32px;font-weight:800;letter-spacing:-.025em;line-height:1;margin:8px 0 4px;}
+.saas-sub{font-size:11.5px;color:var(--t3);line-height:1.45;}
+.saas-alerta{font-size:11px;color:var(--t2);background:var(--abg);border:1px solid var(--abrd);
+  border-radius:var(--rad-sm);padding:7px 10px;margin-top:10px;line-height:1.5;}
+.saas-origen{font-size:10.5px;color:var(--t3);line-height:1.5;margin-top:auto;padding-top:10px;
+  border-top:1px dashed var(--brd);}
+
+/* Lo que decidimos NO inventar, dicho en su propia tarjeta en vez de callado. */
+.hueco-card{background:var(--surface2);border:1px dashed var(--brd);border-radius:var(--rad);padding:16px 20px;}
+.hueco-t{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:8px;}
+.hueco-card p{font-size:12.5px;color:var(--t2);line-height:1.6;max-width:82ch;margin-bottom:8px;}
+.hueco-card .btn{margin-top:4px;}
+
+/* ─── Activación · embudo por fases ───────────────────────────────────────── */
+.emb{display:flex;flex-direction:column;gap:16px;}
+.emb-paso{display:flex;flex-direction:column;gap:5px;}
+.emb-cab{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.emb-nom{font-size:13.5px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:8px;}
+.emb-idx{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;
+  border-radius:50%;background:var(--surface3);color:var(--t2);font-size:11px;font-weight:700;}
+.emb-cuello{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--r);background:var(--rbg);border:1px solid var(--rbrd);border-radius:999px;padding:2px 8px;}
+.emb-cifras{display:flex;align-items:baseline;gap:9px;}
+.emb-cifras b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
+.emb-pctbase{font-size:11.5px;color:var(--t3);}
+.emb-track{height:14px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+.emb-fill{height:100%;background:var(--blue);border-radius:4px;min-width:2px;transition:width .2s;}
+.emb-fill-cuello{background:var(--a);}
+.emb-desc{font-size:11.5px;color:var(--t3);}
+.emb-conv{font-size:11.5px;color:var(--t2);padding-left:8px;border-left:2px solid var(--brd);}
+.emb-conv-cuello{color:var(--r);border-left-color:var(--rbrd);}
+
+/* ─── Detalles compartidos ─────────────────────────────────────────────────
+   Las notas de advertencia iban del mismo gris que las informativas, así que
+   una alerta de cobertura de datos se leía igual que una aclaración de rutina. */
+.explorer-nota.nota-warn{background:var(--abg);border-bottom-color:var(--abrd);color:var(--t2);}
+.celda-inmadura{font-size:11px;color:var(--a);font-weight:600;white-space:nowrap;}
+.th-sub{font-weight:400;font-size:10px;color:var(--t3);text-transform:none;letter-spacing:0;}
+
+@media (max-width:720px){
+  .vtab-sep{display:none;}
+  .vtab-grupo{flex-wrap:wrap;}
+  .vol-track{height:110px;}
+  .saas-val{font-size:27px;}
+}
+
+/* Alerta dentro del titular: más fuerte que la nota ámbar de rutina, porque
+   señala algo que hay que ir a arreglar hoy, no un matiz de lectura. */
+.titular-nota.nota-alerta{background:var(--rbg);border-color:var(--rbrd);}

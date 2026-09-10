@@ -15,7 +15,7 @@ import {
   isTeamMember, lastNMonths, teamTotals, stageFunnel, stageFunnelBy, GLOSARIO,
 } from '@/lib/analistas-shared';
 import { LENTES, mesDe, MES_MINIMO } from '@/lib/metrics';
-import { ChartPanel, FunnelMes, GRUPOS } from './metric-explorer';
+import { FunnelMes, MultiLineChart, Leyenda } from './metric-explorer';
 import {
   Delta, Sparkline, TrendChart, SlaDot, RankingChart, StageFunnelPanel,
   StageRankingChart, AnalystDetailModal, STAGE_META, ALL,
@@ -154,6 +154,19 @@ export function ResumenView({ d, ctrl, onNavigate }) {
   const deltaEx = pctEx - pctExPrev;
   const abiertosDelMes = funnelMes.nuevo.n + funnelMes.enProceso.n;
   const esCierre = ctrl.lente === 'cierre';
+  // Aviso reusable: el último punto de las mini-tendencias es el mes en curso.
+  const sVolumen = [
+    { key: 'bop', label: 'Solicitudes', color: 'var(--chart-muted)', vals: trendData.bop },
+    { key: 'atendidos', label: 'Atendidas', color: 'var(--blue)', vals: trendData.atendidos },
+    { key: 'completados', label: 'Completadas', color: 'var(--g)', vals: trendData.completados },
+  ];
+  const sVelocidad = [
+    { key: 'sla', label: 'A la 1ª sesión', color: 'var(--a)', vals: trendData.slaAvg },
+    { key: 'ciclo', label: 'Hasta cerrar', color: 'var(--purple)', vals: trendData.cicloAvg },
+  ];
+  const parcial = trendMonths[trendMonths.length - 1] === currentYM()
+    ? ' El último punto es el mes en curso y va incompleto.'
+    : '';
 
   return (
     <>
@@ -186,6 +199,16 @@ export function ResumenView({ d, ctrl, onNavigate }) {
         )}
         {esCierre && (
           <div className="titular-nota">ℹ️ Estás mirando por <b>fecha de cierre</b>: el universo son solo tickets ya cerrados, por eso aquí no se muestra el % de atención (daría casi siempre 100%). Cambia a «fecha de solicitud» para ver cuánto de lo que llegó alcanzamos a atender.</div>
+        )}
+        {/* Un mes a medio correr contra uno completo no es una comparación.
+            Sin esta línea, todas las flechas rojas de "vs mes ant." se leen como
+            una caída del equipo cuando lo único que falta es que pase el mes. */}
+        {ctrl.mes === currentYM() && (
+          <div className="titular-nota">
+            📅 {monthLabel(ctrl.mes)} lleva <b>{new Date().getDate()} días</b> corridos y el mes anterior está completo,
+            {' '}así que las comparaciones «vs mes ant.» de abajo <b>no son parejas</b> todavía.
+            {' '}Para comparar de verdad, mira <b>Desempeño</b>, que solo usa meses cerrados.
+          </div>
         )}
         {t.agendadosNoAtendidos > 0 && (
           <div className="titular-nota">📅 {fmtInt(t.agendadosNoAtendidos)} ticket{t.agendadosNoAtendidos === 1 ? '' : 's'} con sesión agendada que <b>no llegó a darse</b> (no asistió, cancelada o reagendada). No cuentan como atendidos.</div>
@@ -262,19 +285,53 @@ export function ResumenView({ d, ctrl, onNavigate }) {
 
       <FunnelMes totals={t} mesLabel={monthLabel(ctrl.mes)} enCurso={ctrl.mes === currentYM()} />
 
-      {/* Una gráfica por tema. Cada una hereda los filtros de arriba y se puede
-          mover aparte para comparar sin tocar el resto del tablero. */}
+      {/* El progreso histórico SÍ va en la portada —es lo primero que pregunta
+          dirección— pero resumido a dos gráficas: volumen y tiempos. Las seis
+          gráficas por tema, con sus filtros y divisiones, viven en Desempeño.
+          Tenerlas aquí hacía que la portada tardara minutos en leerse, no
+          segundos, que es justo lo contrario de para lo que existe. */}
       <div className="seccion-t">Cómo venimos en el tiempo</div>
-      {GRUPOS.map((g) => (
-        <ChartPanel key={g.id} grupo={g} records={d.recordsTodos} lente={ctrl.lente}
-          paisOpts={d.paisOpts} segOpts={d.segOpts}
-          globalPais={ctrl.pais} globalSeg={ctrl.seg}
-          conBase={g.id === 'mrr' || g.id === 'csat'} />
-      ))}
+      <div className="mini-trend-row">
+        <div className="chart-card">
+          <div className="chart-card-hd"><div>
+            <div className="stitle">Volumen de gestión</div>
+            <div className="ssub">Últimos {trendMonths.length} meses. Lo que llega frente a lo que cerramos bien.{parcial}</div>
+          </div></div>
+          <Leyenda series={sVolumen} />
+          <div className="chart-card-bd">
+            <MultiLineChart months={trendMonths} unidad="conteo" alto={200} ancho={520} series={sVolumen} />
+          </div>
+        </div>
+        <div className="chart-card">
+          <div className="chart-card-hd"><div>
+            <div className="stitle">Velocidad</div>
+            <div className="ssub">Días promedio. Bajar es mejorar.{parcial}</div>
+          </div></div>
+          <Leyenda series={sVelocidad} />
+          <div className="chart-card-bd">
+            <MultiLineChart months={trendMonths} unidad="dias" alto={200} ancho={520} series={sVelocidad} />
+          </div>
+        </div>
+      </div>
 
-      {/* Histórico al hacer clic en una tarjeta. El popup usa `scoped`: respeta los
-          filtros de país/segmento de la barra de arriba, pero NO el mes — la gracia
-          es justamente ver todos los meses. */}
+      <div className="cta-row">
+        <button className="cta-card" onClick={() => onNavigate && onNavigate('desempeno')}>
+          <span className="cta-icon">📈</span>
+          <span className="cta-txt">
+            <b>Ver el desempeño del equipo</b>
+            <small>Antes vs ahora, capacidad por analista y las seis gráficas por tema, con filtros propios.</small>
+          </span>
+          <span className="cta-flecha">→</span>
+        </button>
+        <button className="cta-card" onClick={() => onNavigate && onNavigate('activacion')}>
+          <span className="cta-icon">🚀</span>
+          <span className="cta-txt">
+            <b>Ver la activación (lectura SaaS)</b>
+            <small>Time to First Value, % activado a 30/60/90 días, embudo por fases y cuentas en riesgo.</small>
+          </span>
+          <span className="cta-flecha">→</span>
+        </button>
+      </div>
     </>
   );
 }

@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import AnalistasView from './analistas-view';
 import AlegraLogo from './logo';
 import { useDashData, DashControls, ResumenView, OperacionView, EquipoView } from './dash';
+import { DesempenoView } from './desempeno-view';
+import { ActivacionView } from './activacion-view';
 import { avg1, teamTotals, GLOSARIO, currentYM, monthLabel } from '@/lib/analistas-shared';
 import { enVentana, MES_MINIMO, esVersionOperada } from '@/lib/metrics';
 
@@ -89,7 +91,33 @@ function metricFmt(key, v) {
 
 const ALL = '__todos__';
 // Vistas que comparten la barra de controles (mes / lente / país / segmento).
-const VISTAS_DASH = ['resumen', 'operacion', 'equipo'];
+const VISTAS_DASH = ['resumen', 'desempeno', 'activacion', 'operacion', 'equipo'];
+
+// Las pestañas van en DOS GRUPOS con etiqueta, no en una fila plana de siete.
+// El criterio es "quién la abre", que es lo que el lector se pregunta primero.
+// Con siete pestañas seguidas, un stakeholder que entra por primera vez tiene
+// que abrirlas todas para saber cuál es la suya — y eso ya rompe los 30
+// segundos antes de haber leído un solo número.
+const GRUPOS_VISTA = [
+  {
+    id: 'direccion', label: 'Para dirección',
+    tabs: [
+      { k: 'resumen', icon: '📊', label: 'Resumen', hint: '¿Cómo vamos este mes? Lo esencial en 30 segundos.' },
+      { k: 'desempeno', icon: '📈', label: 'Desempeño', hint: '¿Hemos mejorado? Volumen y tiempos, mes a mes.' },
+      { k: 'activacion', icon: '🚀', label: 'Activación', hint: 'Métricas SaaS de onboarding: TTFV, activación y embudo por fases.' },
+    ],
+  },
+  {
+    id: 'operacion', label: 'Día a día',
+    tabs: [
+      { k: 'operacion', icon: '🚦', label: 'Hoy', hint: '¿Dónde se están atorando los clientes ahora mismo?' },
+      { k: 'equipo', icon: '👥', label: 'Analistas', hint: '¿Cómo va cada analista y quién necesita apoyo?' },
+      { k: 'explorador', icon: '🔎', label: 'Explorador', hint: 'Preguntas libres sobre cualquier ticket.' },
+      { k: 'historico', icon: '🗂️', label: 'Histórico', hint: 'Mes a mes con las sesiones del registro Connect.' },
+    ],
+  },
+];
+const VISTAS_VALIDAS = GRUPOS_VISTA.flatMap((g) => g.tabs.map((t) => t.k));
 
 export default function Page() {
   const [data, setData] = useState(null);
@@ -126,7 +154,7 @@ export default function Page() {
   // a la pestaña que a uno le interesa, y recargar no te devuelve al inicio.
   useEffect(() => {
     const v = new URLSearchParams(window.location.search).get('v');
-    if (v && ['resumen', 'operacion', 'equipo', 'explorador', 'historico'].includes(v)) setView(v);
+    if (v && VISTAS_VALIDAS.includes(v)) setView(v);
   }, []);
   useEffect(() => {
     const u = new URL(window.location.href);
@@ -303,11 +331,28 @@ export default function Page() {
 
         {data && (
           <div className="vtabs">
-            <button className={'vtab' + (view === 'resumen' ? ' active' : '')} onClick={() => setView('resumen')} title="¿Vamos bien? Lo esencial del mes en 10 segundos">📊 Resumen</button>
-            <button className={'vtab' + (view === 'operacion' ? ' active' : '')} onClick={() => setView('operacion')} title="¿Dónde se están atorando los clientes?">🚦 Operación</button>
-            <button className={'vtab' + (view === 'equipo' ? ' active' : '')} onClick={() => setView('equipo')} title="¿Cómo va cada analista y quién necesita apoyo?">👥 Equipo</button>
-            <button className={'vtab' + (view === 'explorador' ? ' active' : '')} onClick={() => setView('explorador')} title="Preguntas libres sobre cualquier ticket">🔎 Explorador</button>
-            <button className={'vtab' + (view === 'historico' ? ' active' : '')} onClick={() => setView('historico')} title="Histórico mes a mes con las sesiones del registro Connect">🗂️ Histórico</button>
+            {GRUPOS_VISTA.map((g, gi) => (
+              <div key={g.id} className="vtab-grupo">
+                <div className="vtab-grupo-lbl">{g.label}</div>
+                <div className="vtab-grupo-tabs">
+                  {g.tabs.map((t) => (
+                    <button key={t.k} className={'vtab' + (view === t.k ? ' active' : '')}
+                      onClick={() => setView(t.k)} title={t.hint}>
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+                {gi === 0 && <div className="vtab-sep" />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Una línea que dice qué responde la vista abierta. Es barata y le ahorra
+            al lector el "¿esto qué es?" que se come la mitad de los 30 segundos. */}
+        {data && (
+          <div className="vista-hint">
+            {GRUPOS_VISTA.flatMap((g) => g.tabs).find((t) => t.k === view)?.hint}
           </div>
         )}
 
@@ -316,6 +361,8 @@ export default function Page() {
             <DashControls ctrl={{ ...ctrl, setMes: (m) => setCtrl((c) => ({ ...c, mes: m })) }} setCtrl={setCtrl}
               months={dash.months} paisOpts={dash.paisOpts} segOpts={dash.segOpts} hasFilter={dash.hasFilter} />
             {view === 'resumen' && <ResumenView d={dash} ctrl={{ ...ctrl, setMes: (m) => setCtrl((c) => ({ ...c, mes: m })) }} onNavigate={setView} />}
+            {view === 'desempeno' && <DesempenoView d={dash} ctrl={ctrl} onNavigate={setView} />}
+            {view === 'activacion' && <ActivacionView d={dash} ctrl={ctrl} onNavigate={setView} />}
             {view === 'operacion' && <OperacionView d={dash} ctrl={ctrl} />}
             {view === 'equipo' && <EquipoView d={dash} ctrl={ctrl} onVerHistorial={() => setView('historico')} />}
           </>

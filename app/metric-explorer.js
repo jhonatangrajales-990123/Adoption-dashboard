@@ -15,7 +15,7 @@
 // armados por unidad (tickets / % / días / nota / dinero).
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fmtInt, monthLabel, teamTotals, colorOf } from '@/lib/analistas-shared';
+import { fmtInt, monthLabel, teamTotals, colorOf, currentYM } from '@/lib/analistas-shared';
 import { mesDe, esAtendido, esCompletado, MES_MINIMO } from '@/lib/metrics';
 
 const ALL = '__todos__';
@@ -90,10 +90,20 @@ export const GRUPOS = [
     subtitulo: 'Todo sobre la misma base: de cada 100 solicitudes del mes, cuántas recibieron primera sesión, cuántas terminaron completadas y cuántas se cayeron. Pasa el mouse para ver el tamaño de la base — un % que baja muchas veces es que entró más trabajo, no que se hiciera peor.',
     metricas: ['pctAtendidos', 'pctCompletados', 'pctNoCompletados'],
   },
+  // Antes estas dos iban juntas bajo "¿Qué tan bien convertimos en cada paso?"
+  // y no se entendía qué medían. El título prometía pasos consecutivos de un
+  // embudo, pero no lo son: se calculan sobre denominadores distintos, no
+  // encadenan, y encima van en direcciones opuestas (la verde sube = bien, la
+  // roja sube = mal). Dos preguntas distintas necesitan dos gráficas.
   {
-    id: 'conversion', titulo: '¿Qué tan bien convertimos en cada paso?',
-    subtitulo: 'Estas dos NO se miden sobre las solicitudes: la primera es sobre los atendidos y la segunda sobre las sesiones con resultado registrado. Por eso van aparte.',
-    metricas: ['tasa', 'noShowPct'],
+    id: 'exito', titulo: 'De los clientes que sí atendimos, ¿cuántos terminan la migración?',
+    subtitulo: 'Completadas ÷ atendidas. OJO al denominador: NO son las solicitudes del mes, son solo las que alcanzaron a recibir su primera sesión. Mide qué tan bien cerramos lo que empezamos. ↑ Subir es mejor.',
+    metricas: ['tasa'],
+  },
+  {
+    id: 'noshow', titulo: '¿Cuántas sesiones agendadas se caen?',
+    subtitulo: 'Sesiones a las que el cliente no llegó ÷ sesiones con resultado anotado en HubSpot. No entra aquí la sesión sin resultado registrado, porque no sabríamos si ocurrió. ↓ Bajar es mejor.',
+    metricas: ['noShowPct'],
   },
   {
     id: 'tiempos', titulo: '¿Cuánto nos tardamos?',
@@ -157,12 +167,18 @@ function MetaTxt({ m }) {
 }
 
 // ─── Gráfica de líneas: un solo eje, una sola unidad ───
-export function MultiLineChart({ months, series, unidad, alto = 230, totalMes = null }) {
+// `ancho` NO es el ancho en pantalla: el SVG siempre ocupa el 100% de su
+// contenedor. Es el ancho del LIENZO interno, y por eso decide el tamaño con el
+// que se ve la letra. Un lienzo de 900 metido en una columna de 660px se
+// encoge a 0,73 y la fuente de 9,5px acaba en 7px, ilegible. Para una gráfica
+// que va en media pantalla hay que pedir un lienzo más angosto, no una fuente
+// más grande — así el mismo componente se lee igual de bien en los dos tamaños.
+export function MultiLineChart({ months, series, unidad, alto = 230, totalMes = null, ancho = 900 }) {
   const ref = useRef(null);
   const [hover, setHover] = useState(null);
   const U = UNIDADES[unidad] || UNIDADES.conteo;
 
-  const W = 900, H = alto, padL = 56, padR = 54, padT = 14, padB = 28;
+  const W = ancho, H = alto, padL = 56, padR = 54, padT = 14, padB = 28;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const n = months.length;
   const xFor = (i) => (n > 1 ? padL + (i / (n - 1)) * plotW : padL + plotW / 2);
@@ -277,6 +293,23 @@ export function MultiLineChart({ months, series, unidad, alto = 230, totalMes = 
 }
 
 // Leyenda donde cada entrada se prende y apaga con un clic
+// Leyenda simple, para las gráficas que no llevan filtros propios.
+// No es opcional: con dos o más líneas, sin leyenda el lector ve trazos de
+// colores y tiene que adivinar cuál es cuál. La etiqueta del último punto dice
+// el valor, no la identidad.
+export function Leyenda({ series }) {
+  if (series.length < 2) return null;
+  return (
+    <div className="chart-legend">
+      {series.map((s) => (
+        <span key={s.key} className="chart-legend-item">
+          <span className="chart-legend-key" style={{ background: s.color }} />{s.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function LeyendaFiltrable({ series, ocultas, toggle }) {
   if (series.length < 2) return null;
   return (
@@ -295,8 +328,14 @@ function LeyendaFiltrable({ series, ocultas, toggle }) {
   );
 }
 
-const mesesDe = (records, lente) =>
-  [...new Set(records.map((r) => mesDe(r, lente)).filter((m) => m && m >= MES_MINIMO))].sort();
+// El mes en curso NO entra en las series de tendencia. Un mes a medio llenar
+// hunde todas las líneas en el último punto y se lee como una caída del equipo
+// cuando lo único que pasa es que el mes no ha terminado. Para el mes en curso
+// está la vista Resumen, que sí lo trata como lo que es.
+const mesesDe = (records, lente) => {
+  const actual = currentYM();
+  return [...new Set(records.map((r) => mesDe(r, lente)).filter((m) => m && m >= MES_MINIMO && m !== actual))].sort();
+};
 
 // ═══ EL EMBUDO DEL MES ═══
 // Los tres pasos con la MISMA base, para ver de verdad cuántas llegan al final
@@ -394,18 +433,31 @@ export function ChartPanel({
   useEffect(() => { setPais(globalPais); }, [globalPais]);
   useEffect(() => { setSeg(globalSeg); }, [globalSeg]);
 
-  const propio = pais !== globalPais || seg !== globalSeg;
   const campo = DIVISIONES[division].campo;
   const dividido = !!campo;
+
+  // Un filtro no puede pelearse con la división de la misma gráfica: si estás
+  // dividiendo POR país y a la vez filtras A un país, te queda una sola línea y
+  // la división deja de decir nada. Cuando eso pasa, el filtro en conflicto se
+  // apaga solo (y el select queda deshabilitado explicando por qué), en vez de
+  // dejarte creer que estás comparando algo.
+  const chocaPais = campo === 'pais_label';
+  const chocaSeg = campo === 'segmento';
+  const paisEf = chocaPais ? ALL : pais;
+  const segEf = chocaSeg ? ALL : seg;
+  // "Filtro propio" solo si TÚ moviste un filtro que sigue activo. Un filtro
+  // anulado por la división no es una divergencia que tengas que deshacer —
+  // eso ya lo explica la nota de conflicto de abajo.
+  const propio = (!chocaPais && pais !== globalPais) || (!chocaSeg && seg !== globalSeg);
 
   const filtrados = useMemo(() => {
     const f = BASES[base].filtro;
     return records.filter((r) =>
-      (pais === ALL || r.pais_label === pais) &&
-      (seg === ALL || r.segmento === seg) &&
+      (paisEf === ALL || r.pais_label === paisEf) &&
+      (segEf === ALL || r.segmento === segEf) &&
       (!f || f(r))
     );
-  }, [records, pais, seg, base]);
+  }, [records, paisEf, segEf, base]);
 
   const todosMeses = useMemo(() => mesesDe(filtrados, lente), [filtrados, lente]);
   const months = useMemo(() => (rango ? todosMeses.slice(-rango) : todosMeses), [todosMeses, rango]);
@@ -457,6 +509,28 @@ export function ChartPanel({
   }, [dividido, metricaDiv, totalesMes]);
 
   const unidad = dividido ? M[metricaDiv].unidad : M[grupo.metricas[0]].unidad;
+
+  // ── Guardas de lectura ─────────────────────────────────────────────────────
+  // Sin esto, dos gráficas se leen como hechos cuando no lo son:
+  //
+  // CSAT: el promedio de 2 respuestas se ve igual de sólido que el de 200. Al
+  // filtrar a un país chico la línea salta y parece una caída de calidad.
+  //
+  // MRR: el dato falta en un tercio de los tickets, y falta MUCHO más en
+  // Contador que en Pyme. Una suma filtrada a Contador queda subestimada sin
+  // que nada lo advierta, y eso lleva a conclusiones al revés.
+  const N_MINIMO = 10;
+  const mesesFlojos = useMemo(() => {
+    if (grupo.id !== 'csat') return 0;
+    return totalesMes.filter((t) => t.csatN > 0 && t.csatN < N_MINIMO).length;
+  }, [grupo.id, totalesMes]);
+
+  const cobertura = useMemo(() => {
+    if (grupo.id !== 'mrr') return null;
+    const n = filtrados.length;
+    const con = filtrados.filter((r) => r.mrr != null).length;
+    return { n, con, pct: n ? Math.round((con / n) * 100) : 0 };
+  }, [grupo.id, filtrados]);
   const visibles = series.filter((s) => !ocultas.has(s.key));
   const toggleSerie = (k) => setOcultas((prev) => {
     if (k === null) return new Set();
@@ -480,14 +554,18 @@ export function ChartPanel({
 
       <div className="panel-ctrl">
         <div className="fg fg-inline"><label>Versión</label>
-          <select className="inp" value={pais} onChange={(e) => setPais(e.target.value)}>
-            <option value={ALL}>Todas</option>
+          <select className="inp" value={paisEf} disabled={chocaPais}
+            title={chocaPais ? 'Esta gráfica ya está dividida por país: filtrar a uno solo dejaría una única línea.' : undefined}
+            onChange={(e) => setPais(e.target.value)}>
+            <option value={ALL}>{chocaPais ? 'Todas (dividido por país)' : 'Todas'}</option>
             {paisOpts.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="fg fg-inline"><label>Segmento</label>
-          <select className="inp" value={seg} onChange={(e) => setSeg(e.target.value)}>
-            <option value={ALL}>Contador y Pyme</option>
+          <select className="inp" value={segEf} disabled={chocaSeg}
+            title={chocaSeg ? 'Esta gráfica ya está dividida por segmento: filtrar a uno solo dejaría una única línea.' : undefined}
+            onChange={(e) => setSeg(e.target.value)}>
+            <option value={ALL}>{chocaSeg ? 'Ambos (dividido por segmento)' : 'Contador y Pyme'}</option>
             {segOpts.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -519,6 +597,25 @@ export function ChartPanel({
 
       {dividido && grupos.length > 8 && (
         <div className="explorer-nota">Se dibujan los 8 grupos con más tickets de {grupos.length}. Clic en la leyenda para apagar o prender una línea.</div>
+      )}
+      {(chocaPais || chocaSeg) && (
+        <div className="explorer-nota">
+          ℹ️ Estás dividiendo por <b>{chocaPais ? 'país' : 'segmento'}</b>, así que ese filtro queda en «todos»:
+          {' '}filtrarlo dejaría una sola línea y no habría nada que comparar. Cada línea del gráfico ya <b>es</b> un {chocaPais ? 'país' : 'segmento'}.
+        </div>
+      )}
+      {mesesFlojos > 0 && (
+        <div className="explorer-nota nota-warn">
+          ⚠️ <b>Pocas respuestas:</b> {mesesFlojos} de los {months.length} meses tienen menos de {N_MINIMO} CSAT.
+          {' '}Con esa cantidad, un solo cliente descontento mueve el promedio un punto entero — mira la tendencia, no el mes suelto.
+        </div>
+      )}
+      {cobertura && cobertura.pct < 90 && (
+        <div className="explorer-nota nota-warn">
+          ⚠️ <b>Cobertura del dato: {cobertura.pct}%</b> — solo {fmtInt(cobertura.con)} de {fmtInt(cobertura.n)} tickets de esta selección traen MRR en HubSpot.
+          {' '}Lo que ves es un <b>piso, no el total</b>. El hueco no está repartido parejo: en Contador falta mucho más seguido que en Pyme,
+          {' '}así que comparar los dos segmentos por esta gráfica subestima a Contador.
+        </div>
       )}
 
       <LeyendaFiltrable series={series} ocultas={ocultas} toggle={toggleSerie} />

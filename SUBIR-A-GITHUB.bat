@@ -6,8 +6,12 @@ cd /d "%~dp0"
 echo.
 echo ============================================================
 echo   PUBLICAR EL DASHBOARD DE ADOPTION
-echo   repo: jhonatangrajales-990123/Adoption-dashboard
 echo ============================================================
+echo.
+echo   Vercel esta conectado al repo "adoption-explorer".
+echo   Ese es el push que dispara el despliegue.
+echo   El repo "Adoption-dashboard" se actualiza tambien, para
+echo   que no se quede viejo.
 echo.
 echo   Si es la primera vez puede abrirse el navegador para
 echo   iniciar sesion en GitHub. Es normal.
@@ -26,44 +30,48 @@ if errorlevel 1 (
 )
 echo.
 
-echo [2/3] Subiendo...
+echo [2/3] Subiendo a adoption-explorer ^(este actualiza Vercel^)...
 echo.
-git push nuevo main
+git push origin main
 set ERR=%errorlevel%
 echo.
 
 if not %ERR%==0 (
-  echo [3/3] Reintentando tras sincronizar...
+  echo       Reintentando tras sincronizar...
   echo.
-  git fetch nuevo main
+  git fetch origin main
   git reset --soft FETCH_HEAD
   git add -A
   git diff --staged --quiet
   if errorlevel 1 git -c user.name="Jhonatan Grajales" -c user.email="jhonatan.grajales@alegra.com" commit -q -m "Actualizacion del dashboard de Adoption"
-  git push nuevo main
+  git push origin main
   set ERR=%errorlevel%
   echo.
 )
+
+echo [3/3] Copia en Adoption-dashboard...
+echo.
+git push nuevo main
+echo.
 
 echo ============================================================
 if %ERR%==0 (
   echo   LISTO - YA ESTA EN GITHUB
   echo ============================================================
   echo.
-  echo   https://github.com/jhonatangrajales-990123/Adoption-dashboard
+  echo   Vercel esta construyendo la nueva version.
+  echo   En 1-2 minutos: https://adoption-explorer.vercel.app
   echo.
-  echo   Si Vercel ya apunta a este repo, esta construyendo
-  echo   la nueva version. En 1-2 minutos:
-  echo   https://adoption-explorer.vercel.app
+  echo   OJO: ese enlace hoy esta ABIERTO a cualquiera que lo
+  echo   tenga, con nombres de clientes y MRR. Para cerrarlo hay
+  echo   que poner ADOPTION_PASSWORD en las variables de entorno
+  echo   del proyecto en Vercel.
   echo.
 ) else (
   echo   NO SE PUDO SUBIR
   echo ============================================================
   echo.
   echo   Copia el error de arriba y pasamelo.
-  echo.
-  echo   Si dice "Repository not found", el repo todavia no
-  echo   existe: creralo en GitHub ^(privado^) y vuelve a correr esto.
   echo.
 )
 

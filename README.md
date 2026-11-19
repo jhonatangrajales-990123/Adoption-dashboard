@@ -25,7 +25,8 @@ Código: `lib/connect/normalizar.js` (todas las reglas de negocio, probadas con 
 | Variable | Obligatoria | Para qué |
 |---|---|---|
 | `HUBSPOT_TOKEN` | Sí | Token de la private app de HubSpot (solo servidor) |
-| `ADOPTION_PASSWORD` | Sí | Contraseña del equipo. Sin ella el sitio responde 503 (cerrado a propósito) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET` | Una de las dos llaves | Login con Google, solo cuentas @alegra.com |
+| `ADOPTION_PASSWORD` | Una de las dos llaves | Contraseña del equipo. Si no hay Google ni contraseña, el sitio responde 503 (cerrado a propósito) |
 | `CRON_SECRET` | Sí | Secreto del cron; Vercel lo envía solo **únicamente si la variable se llama así**. Sin él, el refresco diario recibe 401 |
 | `CONNECT_TOKEN` | Para subir retención/activación | Token del agente en `/api/connect/snapshot` |
 | `REDIS_URL` | Recomendada | Conexión a Redis (la pone la integración de Vercel). Alternativa: `KV_REST_API_URL` y `KV_REST_API_TOKEN`. Sin ninguna, los datos se pierden al reiniciar |
@@ -33,7 +34,11 @@ Código: `lib/connect/normalizar.js` (todas las reglas de negocio, probadas con 
 
 Cada variable debe estar marcada para **Production y Preview** si quieres probar las vistas previas de las ramas.
 
-Seguridad: la cookie de sesión guarda una huella (SHA-256), no la contraseña; las rutas de servicio
+Despliegue: el proyecto de Vercel `alegra-adoption-dasboard-vercel` se despliega desde el repo
+`jhonatangrajales-990123/adoption-vercel` (rama `master`). Este repo (`Adoption-dashboard`) es la copia de trabajo:
+lo que se aprueba se sube a los dos.
+
+Seguridad: login con Google (@alegra.com) o contraseña; la cookie de la contraseña guarda una huella (SHA-256), no la contraseña; las rutas de servicio
 (`/api/refresh`, `/api/connect/refresh`, `/api/connect/snapshot`) exigen secreto o sesión y quedan cerradas
 si el secreto no existe; no hay claves en el repo.
 

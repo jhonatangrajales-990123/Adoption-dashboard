@@ -26,9 +26,12 @@ Código: `lib/connect/normalizar.js` (todas las reglas de negocio, probadas con 
 |---|---|---|
 | `HUBSPOT_TOKEN` | Sí | Token de la private app de HubSpot (solo servidor) |
 | `ADOPTION_PASSWORD` | Sí | Contraseña del equipo. Sin ella el sitio responde 503 (cerrado a propósito) |
-| `CRON_SECRET` | Sí | Secreto del cron; Vercel lo envía solo. Sin él, solo refresca quien tenga sesión |
+| `CRON_SECRET` | Sí | Secreto del cron; Vercel lo envía solo **únicamente si la variable se llama así**. Sin él, el refresco diario recibe 401 |
 | `CONNECT_TOKEN` | Para subir retención/activación | Token del agente en `/api/connect/snapshot` |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Recomendadas | Los pone Vercel al conectar el KV; sin KV los datos se pierden al reiniciar |
+| `REDIS_URL` | Recomendada | Conexión a Redis (la pone la integración de Vercel). Alternativa: `KV_REST_API_URL` y `KV_REST_API_TOKEN`. Sin ninguna, los datos se pierden al reiniciar |
+| `REFRESH_SECRET` | Opcional | Secreto alternativo para llamar a los refrescos a mano |
+
+Cada variable debe estar marcada para **Production y Preview** si quieres probar las vistas previas de las ramas.
 
 Seguridad: la cookie de sesión guarda una huella (SHA-256), no la contraseña; las rutas de servicio
 (`/api/refresh`, `/api/connect/refresh`, `/api/connect/snapshot`) exigen secreto o sesión y quedan cerradas

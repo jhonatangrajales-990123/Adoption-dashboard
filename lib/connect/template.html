@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alegra Connect integral</title>
+<style>
+:root{
+  --bg:#f6f8fa;--card:#ffffff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;
+  --brand:#30bbb7;--brand-ink:#0f766e;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;
+  --s1:#30bbb7;--s2:#6366f1;--s3:#f59e0b;--s4:#94a3b8;--s5:#ec4899;
+  --okbg:#dcfce7;--warnbg:#fef3c7;--badbg:#fee2e2;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f172a;--card:#1e293b;--ink:#e2e8f0;--muted:#94a3b8;--line:#334155;--soft:#273449;
+  --brand:#3fcfca;--brand-ink:#5eead4;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --s1:#3fcfca;--s2:#818cf8;--s3:#fbbf24;--s4:#64748b;--s5:#f472b6;
+  --okbg:#14532d;--warnbg:#713f12;--badbg:#7f1d1d;}}
+:root[data-theme="dark"]{
+  --bg:#0f172a;--card:#1e293b;--ink:#e2e8f0;--muted:#94a3b8;--line:#334155;--soft:#273449;
+  --brand:#3fcfca;--brand-ink:#5eead4;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --s1:#3fcfca;--s2:#818cf8;--s3:#fbbf24;--s4:#64748b;--s5:#f472b6;
+  --okbg:#14532d;--warnbg:#713f12;--badbg:#7f1d1d;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;position:sticky;top:0;z-index:5}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:18px;margin:0}
+.sub{color:var(--muted);font-size:12px}
+.sp{flex:1}
+button,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+button{cursor:pointer}
+.tabs{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
+.tab{border:none;background:none;padding:7px 12px;border-radius:8px;color:var(--muted);white-space:nowrap}
+.tab.on{background:var(--brand);color:#fff;font-weight:600}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.filters label{font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center}
+main{padding:18px 20px;max-width:1280px;margin:0 auto}
+.q{font-size:20px;font-weight:700;margin:0 0 4px}
+.headline{background:var(--soft);border-left:4px solid var(--brand);padding:10px 14px;border-radius:8px;margin:8px 0 16px}
+.grid{display:grid;gap:12px}
+.k{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0 0 8px;font-size:14px}
+.kpi .v{font-size:26px;font-weight:700}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .c{font-size:12px;margin-top:2px}
+.up{color:var(--ok)}.down{color:var(--bad)}.neu{color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px;position:sticky;top:0;background:var(--card)}
+td:first-child,th:first-child{text-align:left}
+td.l,th.l{text-align:left}
+.scroll{overflow:auto;max-height:560px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.pbad{background:var(--badbg);color:var(--bad)}.pwarn{background:var(--warnbg);color:var(--warn)}.pok{background:var(--okbg);color:var(--ok)}
+.pmut{background:var(--soft);color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.info{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--soft);color:var(--muted);text-align:center;font-size:11px;line-height:16px;cursor:help;margin-left:4px;font-weight:700}
+.funnel .row{display:grid;grid-template-columns:170px 1fr 120px;gap:10px;align-items:center;margin:6px 0}
+.funnel .bar{height:26px;background:var(--brand);border-radius:6px;min-width:2px}
+.funnel .lab{font-size:13px}
+.funnel .num{font-size:12px;color:var(--muted)}
+a{color:var(--brand-ink)}
+svg text{fill:var(--muted);font-size:11px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--soft)}
+table.eq tr.sel td{background:var(--soft);box-shadow:inset 0 -2px 0 var(--brand)}
+.gbar{display:flex;gap:6px;align-items:flex-end;height:90px;margin:6px 0 2px}.gbar .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted)}.gbar .stk{width:70%;max-width:46px;display:flex;flex-direction:column-reverse;border-radius:4px;overflow:hidden}
+/* estado: colores fijos (validados), siempre con ícono */
+:root{--st-good:#0ca30c;--st-warn:#fab219;--st-bad:#d03b3b}
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:4px}
+.tile .l{font-size:13px;color:var(--muted);font-weight:600}
+.tile .vrow{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.tile .v{font-size:36px;font-weight:650;line-height:1.05}
+.tile .of{font-size:16px;color:var(--muted);font-weight:500}
+.tile .m{font-size:12px;color:var(--muted)}
+.tile.go{cursor:pointer}.tile.go:hover{border-color:var(--brand)}
+.stt{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:600;color:var(--ink);padding:1px 9px 1px 3px;border-radius:999px;background:var(--soft)}
+.stt i,.ico{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;font-style:normal;font-size:10px;font-weight:800;color:#fff;vertical-align:-3px}
+.good i,.ico.good{background:var(--st-good)}.warn i,.ico.warn{background:var(--st-warn);color:#0b0b0b}.bad i,.ico.bad{background:var(--st-bad)}.na i,.ico.na{background:var(--s4)}
+td.c-good{background:var(--okbg)}td.c-warn{background:var(--warnbg)}td.c-bad{background:var(--badbg)}td.c-na{color:var(--muted)}
+.sec{margin:22px 0 8px;font-size:15px;font-weight:650}
+.mx td,.mx th{padding:9px 10px}.mx tr.sel td{box-shadow:inset 0 -2px 0 var(--brand)}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:2px 0 16px}
+.hero .big{font-size:52px;font-weight:650;line-height:1;color:var(--ink)}
+.hero .what{font-size:15px;max-width:640px}
+.hero.sm{margin:4px 0 10px}.hero.sm .big{font-size:34px}.hero.sm .what{font-size:13px;color:var(--muted)}
+.frow{display:grid;grid-template-columns:minmax(120px,190px) 1fr minmax(110px,170px);gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.frow:last-of-type{border-bottom:none}.frow.sm{padding:6px 0}
+table.coht td,table.coht th{padding:5px 8px}table.coht td.coh{vertical-align:top;white-space:nowrap}table.coht tr.ctop td{border-top:2px solid var(--line)}
+table.stair td,table.stair th{padding:6px 8px;text-align:center;white-space:nowrap}.mlist{max-width:720px}.mrow{padding:6px 8px;border-radius:8px}.mrow.on{background:var(--line)}.mrow.click{cursor:pointer}.mlab{font-size:14px;margin-bottom:3px}.mbar{display:flex;align-items:center;gap:8px}.mbar .fbar{height:14px;border-radius:4px;min-width:3px}.mbar span{font-size:13px;white-space:nowrap}.zoomc{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.zg{margin:10px 0}.zgh{display:grid;grid-template-columns:minmax(150px,260px) 1fr auto;gap:10px;align-items:center}.zg ul{margin:4px 0 0 18px;padding:0}.zg li{margin:3px 0;font-size:13px}@media(max-width:600px){.zgh{grid-template-columns:1fr auto}.zgh .mbar{display:none}}
+table.stair tr.click{cursor:pointer}table.stair tr.click:hover td.l{text-decoration:underline}table.stair tr.selrow td.l,table.stair tr.selrow td.n0{background:var(--brand);color:#fff}
+table.stair th.hoy,table.stair td.hoy{border-left:2px solid var(--ink);border-right:2px solid var(--ink)}table.stair td.n0{background:var(--soft,#eef7f6);font-weight:600}td.st{background:color-mix(in srgb,var(--brand) calc(var(--a,0)*85%),transparent);font-variant-numeric:tabular-nums}td.st.na{color:var(--muted);background:none}td.st.low{color:var(--muted);background:none}.cohctl{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:10px}.chipb.on{background:var(--brand);color:#fff;border-color:var(--brand)}.frow.click{cursor:pointer}.frow.click:hover{background:var(--line)}
+td.hm{text-align:center;min-width:64px;background:color-mix(in srgb,var(--brand) calc(var(--a,0)*55%),transparent)}td.hm.na{color:var(--muted);font-size:11px;background:none}td.hm.low{color:var(--muted);background:none}.brandtx{font-weight:600}
+.frow.worst{background:linear-gradient(90deg,var(--badbg),transparent 70%);border-radius:8px}
+.ftrack{position:relative;height:14px;background:var(--soft);border-radius:4px}
+.fbar{height:100%;background:var(--brand);border-radius:4px;min-width:2px}
+.goal{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.fnum{text-align:right;font-size:13px}
+.hb{display:flex;gap:2px;height:10px;min-width:4px}.hb.clip{-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)}.carga .hbw{flex:1;min-width:120px}.hb i{display:block;height:100%;border-radius:3px}
+.carga{display:flex;align-items:center;gap:8px}.carga .hb{flex:0 1 auto}
+.actr{display:grid;grid-template-columns:70px 1fr 120px;gap:8px;align-items:center;margin:3px 0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.chipb{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:5px 12px}
+.chipb.on{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+details summary{cursor:pointer}
+.spk{flex:none}
+.grid>*,.tiles>*{min-width:0}
+.card{overflow-x:auto}
+@media (max-width:640px){header,main{padding-left:16px;padding-right:16px}.two{grid-template-columns:1fr}.frow{grid-template-columns:100px 1fr 90px}.hero .big{font-size:40px}.tile .v{font-size:30px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Alegra Connect · tablero integral</h1>
+    <span class="sub" id="corte"></span>
+    <span class="sp"></span>
+    <button id="theme" title="Cambiar tema">◐</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="filters">
+    <label>País <select id="fPais"><option>Todos</option><option>COL</option><option>MEX</option><option>DOM</option><option>CRI</option><option>Otro</option></select></label>
+    <label>Segmento <select id="fSeg"><option>Todos</option><option>Contador</option><option>Pyme</option><option>Sin segmento</option></select></label>
+    <label>Analista <select id="fOw"><option>Todos</option></select></label>
+    <label>Pipeline <select id="fPipe"><option value="T">Ambos</option><option value="N">Adopción New</option><option value="O">Viejo (Connect)</option></select></label>
+    <label class="fecha">Desde <select id="fDesde"></select></label>
+    <label class="fecha">Hasta <select id="fHasta"></select></label>
+    <span class="sub" id="fNota"></span>
+  </div>
+</header>
+<main id="main"></main>
+<script>
+const DATA = /*__DATA__*/null;
+const TODAY = DATA.corte.slice(0,10);
+const MES_ACT = TODAY.slice(0,7);
+const HS = id => `https://app.hubspot.com/contacts/6180490/record/2-40542822/${id}`;
+const ORD = {NEW:0,WORK:1,KICK:2,SOL:3,PROC:4,CIC:5,CIE:6};
+const LAB = {NEW:'New (bandeja)',WORK:'Working',KICK:'Kick-off',SOL:'Solicitud de información',PROC:'Proceso de migración',CIC:'Ciclo de adopción',CIE:'Cierre',NC:'No completado',
+  O_NUEVO:'Viejo · Nuevo',O_PROC:'Viejo · En proceso',O_COMP:'Viejo · Completada',O_NC:'Viejo · No completada'};
+const META_AGENDA = 2, META_MIG = 6; // días hábiles
+
+// ---------- utilidades de fechas ----------
+const D = s => new Date(s+'T00:00:00Z');
+function cd(a,b){return Math.round((D(b)-D(a))/864e5)}
+function bd(a,b){ // días hábiles (lun-vie) de a a b; sin festivos
+  if(!a||!b) return null; let s=D(a), e=D(b), sign=1; if(e<s){[s,e]=[e,s];sign=-1}
+  const tot=Math.round((e-s)/864e5); const w=Math.floor(tot/7); let n=w*5; const sd=s.getUTCDay();
+  for(let i=1;i<=tot%7;i++){const dd=(sd+i)%7; if(dd!==0&&dd!==6)n++}
+  return n*sign;}
+const med = a => {if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const pct = (a,q) => {if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.floor(q*(s.length-1)+0.5))]};
+const f0 = v => v==null?'–':Number(v).toLocaleString('es-CO',{maximumFractionDigits:1});
+const fp = (n,d) => d? (100*n/d).toFixed(0)+'%' : '–';
+const mes = s => s? s.slice(0,7):null;
+const MESN = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const mlab = m => MESN[+m.slice(5,7)-1]+' '+m.slice(2,4);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const info = t => `<span class="info" title="${esc(t)}">i</span>`;
+
+// ---------- derivar cada registro (una sola vez) ----------
+for(const r of DATA.recs){
+  const d=r.d;
+  if(r.p==='N'){
+    const ws=['WORK','KICK','SOL','PROC','CIC','CIE','NC'].map(k=>d[k]).filter(Boolean).sort();
+    r.ing = ws[0] || null;                 // entrada al universo = primera etapa de trabajo
+    r.band = !r.ing;                       // sigue solo en New: no califica por plan
+    if(r.band) r.ing = r.cre;
+    r.fin = r.st==='CIE'? (d.CIE||r.cre):null;
+    r.ncd = r.st==='NC'? (d.NC||r.cre):null;
+    const maxo = Math.max(...Object.keys(d).filter(k=>k in ORD).map(k=>ORD[k]),0);
+    r.reach = k => !!d[k] || (r.st!=='NC' && ORD[r.st]>ORD[k]) || (r.st==='NC' && maxo>=ORD[k]);
+    r.open = !r.band && ['WORK','KICK','SOL','PROC','CIC'].includes(r.st);
+    r.since = d[r.st] || r.ing;
+  } else {
+    r.ing = r.sol; r.band=false;
+    r.fin = r.st==='O_COMP'? (d.O_COMP||r.cre):null;
+    r.ncd = r.st==='O_NC'? (d.O_NC||r.cre):null;
+    r.open = r.st==='O_NUEVO'||r.st==='O_PROC';
+    r.since = d[r.st] || r.ing;
+  }
+  r.dEt = r.open? bd(r.since,TODAY):null;
+  // Alertas (reglas acordadas 2026-10-27/29)
+  r.al=''; r.alN=0;
+  if(r.open && r.p==='N'){
+    if(r.st==='WORK' && bd(d.WORK||r.ing,TODAY)>META_AGENDA){r.al='Sin agendar > 48 h hábiles';r.alN=2;r.alD='Sales'}
+    if(r.st==='SOL' && bd(d.SOL,TODAY)>META_MIG){r.al='Esperando info > 6 hábiles';r.alN=3;r.alD='Sales'}
+    if(r.st==='PROC' && bd(d.PROC,TODAY)>META_MIG){r.al='SLA migración vencido';r.alN=4;r.alD='Analista'}
+    if(r.st==='CIC' && bd(d.CIC,TODAY)>15){r.al='Ciclo de adopción > 15 hábiles';r.alN=1;r.alD='Analista'}
+    if(!r.ow && ORD[r.st]>=ORD.KICK){r.al=(r.al?r.al+' · ':'')+'Sin owner';r.alN=Math.max(r.alN,3)}
+  }
+  if(r.open && r.p==='O' && cd(r.ing,TODAY)>60){r.al='Backlog viejo > 60 días';r.alN=1;r.alD='Analista'}
+  // Tramos del pipeline nuevo (solo con ambas fechas)
+  if(r.p==='N' && !r.retro){
+    r.t={};
+    const pairs={T1:['WORK','KICK'],T2:['KICK','SOL'],T3:['SOL','PROC'],T4:['PROC','CIC'],T5:['CIC','CIE']};
+    for(const [k,[a,b]] of Object.entries(pairs)) if(d[a]&&d[b]) r.t[k]=[bd(d[a],d[b]),cd(d[a],d[b]),d[b]];
+    if(r.fin && !r.band) r.t.TT=[bd(r.ing,r.fin),cd(r.ing,r.fin),r.fin];
+  }
+  // SLA de migración (método acordado 21/29-oct, el mismo del tablero TMS México):
+  // nuevo = reloj desde Proceso de migración (o, si se la saltó, desde la primera etapa de trabajo) hasta Ciclo o Cierre;
+  // viejo = solo tickets de MIGRACIÓN por título, desde fecha de solicitud hasta fecha de finalización (o Completada).
+  // r.mig = [días háb., días calend., fecha de entrega, fuente]
+  r.mig=null; r.venceD=null;
+  if(r.p==='N' && !r.retro && !r.band){
+    const ini=d.PROC||r.ing, fe=[d.CIC,d.CIE].filter(Boolean).sort()[0];
+    if(fe) r.mig=[bd(ini,fe),cd(ini,fe),fe,d.PROC?'NP':'NS'];
+    else if(r.open) r.venceD=d.SOL||d.PROC||null;   // abierto: vence desde que se pidió la info
+  }
+  if(r.p==='O' && r.tp==='M' && r.st==='O_COMP'){
+    const fe=r.ff||d.O_COMP||r.cre; if(fe>=r.sol) r.mig=[bd(r.sol,fe),cd(r.sol,fe),fe,'OM'];
+  }
+}
+const MIGSRC={OM:'Pipeline viejo · tickets de migración',NP:'Adopción New · pasó por Proceso de migración',NS:'Adopción New · sin Proceso de migración (reloj desde Working)'};
+
+// ---------- filtros ----------
+const $=id=>document.getElementById(id);
+const meses=[];{let m='2026-01';while(m<=MES_ACT){meses.push(m);let [y,mm]=m.split('-').map(Number);mm++;if(mm>12){mm=1;y++}m=y+'-'+String(mm).padStart(2,'0')}}
+for(const m of meses){$('fDesde').add(new Option(mlab(m),m));$('fHasta').add(new Option(mlab(m),m))}
+$('fDesde').value=meses[Math.max(0,meses.length-3)];$('fHasta').value=MES_ACT;
+[...new Set(DATA.recs.filter(r=>r.ow&&!r.band).map(r=>r.ow))].sort().forEach(o=>$('fOw').add(new Option(o)));
+$('fOw').add(new Option('(sin owner)'));
+$('corte').textContent='Datos de HubSpot al '+DATA.corte.replace('T',' ').slice(0,16)+' · mes en curso = parcial';
+const F=()=>({pais:$('fPais').value,seg:$('fSeg').value,ow:$('fOw').value,pipe:$('fPipe').value,desde:$('fDesde').value,hasta:$('fHasta').value});
+function base(f,{ignOw}={}){return DATA.recs.filter(r=>(f.pais==='Todos'||r.pa===f.pais)&&(f.seg==='Todos'||r.seg===f.seg)&&(f.pipe==='T'||r.p===f.pipe)&&
+  (ignOw||f.ow==='Todos'||(f.ow==='(sin owner)'?!r.ow:r.ow===f.ow)))}
+const inR=(f,dt)=>dt&&mes(dt)>=f.desde&&mes(dt)<=f.hasta;
+const mesesR=f=>meses.filter(m=>m>=f.desde&&m<=f.hasta);
+
+// ---------- gráficas SVG ----------
+function bars(series,cats,{h=220,fmt=f0,stack=false,partial=null}={}){
+  const W=Math.max(420,cats.length*64),P={l:34,r:8,t:10,b:28},iw=W-P.l-P.r,ih=h-P.t-P.b;
+  const max=Math.max(1,...cats.map((_,i)=>stack?series.reduce((s,se)=>s+(se.v[i]||0),0):Math.max(...series.map(se=>se.v[i]||0))));
+  const gw=iw/cats.length,bw=stack?gw*0.6:gw*0.8/series.length;let g='';
+  for(let t=0;t<=4;t++){const y=P.t+ih-ih*t/4;g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${P.l-4}" y="${y+4}" text-anchor="end">${Math.round(max*t/4)}</text>`}
+  cats.forEach((c,i)=>{let acc=0;series.forEach((se,j)=>{const v=se.v[i]||0,bh=ih*v/max;
+    const x=stack?P.l+gw*i+gw*0.2:P.l+gw*i+gw*0.1+bw*j,y=stack?P.t+ih-acc-bh:P.t+ih-bh;acc+=stack?bh:0;
+    const op=partial&&c===partial?0.45:1;
+    g+=`<rect x="${x}" y="${y}" width="${bw-2}" height="${bh}" rx="3" fill="${se.c}" opacity="${op}"><title>${esc(se.n)} · ${esc(c)}: ${fmt(v)}</title></rect>`;
+    if(!stack&&v&&series.length<=3)g+=`<text x="${x+(bw-2)/2}" y="${y-3}" text-anchor="middle">${fmt(v)}</text>`});
+    g+=`<text x="${P.l+gw*i+gw/2}" y="${h-8}" text-anchor="middle">${esc(c)}${partial&&c===partial?'*':''}</text>`});
+  const lg=series.map(s=>`<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('');
+  return `<div class="legend">${lg}${partial?'<span>* mes en curso (parcial)</span>':''}</div><div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${h}" width="100%" style="min-width:${Math.min(W,520)}px">${g}</svg></div>`;
+}
+function line(series,cats,{h=200,fmt=f0,goal=null}={}){
+  const W=Math.max(420,cats.length*64),P={l:34,r:8,t:12,b:28},iw=W-P.l-P.r,ih=h-P.t-P.b;
+  const vals=series.flatMap(s=>s.v).filter(v=>v!=null);const max=Math.max(1,goal||0,...vals)*1.1;
+  const X=i=>P.l+iw*(cats.length<2?0.5:i/(cats.length-1)),Y=v=>P.t+ih-ih*v/max;let g='';
+  for(let t=0;t<=4;t++){const y=P.t+ih-ih*t/4;g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${P.l-4}" y="${y+4}" text-anchor="end">${Math.round(max*t/4)}</text>`}
+  if(goal!=null)g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${Y(goal)}" y2="${Y(goal)}" stroke="var(--bad)" stroke-dasharray="4 4"/><text x="${W-P.r}" y="${Y(goal)-4}" text-anchor="end">meta ${goal}</text>`;
+  series.forEach(s=>{const pts=s.v.map((v,i)=>v==null?null:[X(i),Y(v)]);let dpath='',pen=false;
+    pts.forEach(p=>{if(!p){pen=false;return}dpath+=(pen?'L':'M')+p[0]+' '+p[1];pen=true});
+    g+=`<path d="${dpath}" fill="none" stroke="${s.c}" stroke-width="2.5"/>`;
+    pts.forEach((p,i)=>{if(p)g+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${s.c}"><title>${esc(s.n)} · ${cats[i]}: ${fmt(s.v[i])}</title></circle><text x="${p[0]}" y="${p[1]-7}" text-anchor="middle">${fmt(s.v[i])}</text>`})});
+  cats.forEach((c,i)=>g+=`<text x="${X(i)}" y="${h-8}" text-anchor="middle">${esc(c)}</text>`);
+  return `<div class="legend">${series.map(s=>`<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div><div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${h}" width="100%" style="min-width:${Math.min(W,520)}px">${g}</svg></div>`;
+}
+const kpi=(l,v,c='',t='')=>`<div class="card kpi"><div class="l">${l}${t?info(t):''}</div><div class="v">${v}</div><div class="c">${c}</div></div>`;
+const delta=(a,b,inv=false)=>{if(b==null||a==null||!b)return '<span class="neu">sin comparación</span>';const d=(a-b)/b*100;const good=inv?d<0:d>0;
+  return `<span class="${Math.abs(d)<3?'neu':good?'up':'down'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(0)}% vs mes anterior</span>`};
+function table(cols,rows,{click}={}){return `<div class="scroll"><table><thead><tr>${cols.map(c=>`<th class="${c.l?'l':''}">${c.h}</th>`).join('')}</tr></thead><tbody>${
+  rows.map((r,i)=>`<tr ${click?`class="click" data-i="${i}"`:''}>${cols.map(c=>`<td class="${c.l?'l':''}">${c.f(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
+
+// ---------- pestañas ----------
+const TABS=[
+ ['resumen','Resumen','¿Cómo va el equipo? · últimos 30 días'],
+ ['embudo','Embudo y fugas','¿Dónde perdemos clientes?'],
+ ['sla','SLA y tiempos','¿Cuánto tardamos y en qué tramo?'],
+ ['equipo','Equipo','¿Cómo rinde cada analista?'],
+ ['ret','Retención','¿Connect hace que se queden?'],
+ ['lista','Lista para actuar','¿Qué casos muevo hoy?'],
+ ['def','Cómo se mide','¿De dónde sale cada número?']];
+let TAB=(new URLSearchParams(location.search).get('v'))||'resumen';
+$('tabs').innerHTML=TABS.map(t=>`<button class="tab" data-t="${t[0]}">${t[1]}</button>`).join('');
+$('tabs').onclick=e=>{const t=e.target.dataset.t;if(t){TAB=t;render()}};
+document.querySelectorAll('.filters select').forEach(s=>s.onchange=render);
+$('theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark'};
+
+function render(){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
+  try{history.replaceState(null,'','?v='+TAB)}catch(e){}
+  const f=F(),t=TABS.find(x=>x[0]===TAB);
+  const sinFecha=['resumen','lista','ret','def'].includes(TAB);
+  document.querySelectorAll('.fecha').forEach(l=>l.style.display=sinFecha?'none':'');
+  $('fNota').textContent=TAB==='resumen'?'Periodo: últimos 30 días vs 30 días previos':TAB==='lista'?'Abiertos hoy':'';
+  $('main').innerHTML=`<p class="q">${t[2]}</p>`+VIEWS[TAB](f);
+  const hook=HOOKS[TAB];if(hook)hook(f);
+}
+
+// ===== Resumen =====
+function serieMes(rs,ms){
+  return ms.map(m=>({m,
+    ing:rs.filter(r=>!r.band&&mes(r.ing)===m).length,
+    cie:rs.filter(r=>mes(r.fin)===m).length,
+    nc:rs.filter(r=>mes(r.ncd)===m).length,
+    band:rs.filter(r=>r.band&&mes(r.cre)===m).length}));
+}
+const VIEWS={};const HOOKS={};
+// ================== componentes de desempeño ==================
+const META_PCT = 90;            // meta de cumplimiento (Plan SLA MX para el CRO: 90%)
+const BASE_ACT = 84;            // activación baseline junio 2026 (reference_activacion_medicion)
+const addD=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const win=k=>{const b=addD(TODAY,-30*k),a=addD(TODAY,-30*(k+1));return dt=>!!dt&&dt>a&&dt<=b}; // ventana k: 0 = últimos 30 días
+const inCur=win(0),inPrev=win(1);
+const stOf=(v,meta)=>v==null?'na':v>=meta?'good':v>=meta-15?'warn':'bad';
+const ICO={good:'✓',warn:'!',bad:'✕',na:'–'};
+const STL={good:'cumple ',warn:'cerca de ',bad:'bajo ',na:'pocos casos · '};
+const chip=(s,txt)=>`<span class="stt ${s}"><i>${ICO[s]}</i>${txt}</span>`;
+const MINN=5;                   // con menos casos un % no dice nada: se muestra gris
+function M(rs,inW){
+  const del=rs.filter(r=>r.mig&&inW(r.mig[2])),ok=del.filter(r=>r.mig[0]<=META_MIG).length;
+  // agendar: cohorte que entró a Working en la ventana y ya cumplió 48 h hábiles; incluye a los que nunca agendaron
+  const ag=rs.filter(r=>r.p==='N'&&!r.retro&&r.d.WORK&&inW(r.d.WORK)&&bd(r.d.WORK,TODAY)>META_AGENDA&&!(!r.d.KICK&&r.reach('KICK'))),
+    agOk=ag.filter(r=>r.d.KICK&&bd(r.d.WORK,r.d.KICK)<=META_AGENDA).length;
+  const cie=rs.filter(r=>inW(r.fin)).length,nc=rs.filter(r=>inW(r.ncd)).length;
+  return {del:del.length,sla:del.length?100*ok/del.length:null,ag:ag.length,agp:ag.length?100*agOk/ag.length:null,cie,nc,comp:cie+nc?100*cie/(cie+nc):null,
+    med:med(del.map(r=>r.mig[0]))};
+}
+function venc(r){ if(!r.open||r.p!=='N')return null; const d=r.d;
+  if(r.st==='WORK'&&bd(d.WORK||r.ing,TODAY)>META_AGENDA)return 'ag';
+  if(r.st==='SOL'&&bd(d.SOL,TODAY)>META_MIG)return 'info';
+  if(r.st==='PROC'&&bd(d.PROC,TODAY)>META_MIG)return 'mig';
+  if(r.st==='CIC'&&bd(d.CIC,TODAY)>15)return 'cic';
+  return null;}
+const VENC={ag:['Sin agendar > 48 h','Sales','Sin agendar > 48 h hábiles'],info:['Esperando información > 6 días','Sales / cliente','Esperando info > 6 hábiles'],
+  mig:['Migración fuera de SLA','Analista','SLA migración vencido'],cic:['Capacitación > 15 días','Analista','Ciclo de adopción > 15 hábiles']};
+function spark(v){const W=110,H=30,vs=v.filter(x=>x!=null);if(vs.length<2)return '';const mx=Math.max(...vs),mn=Math.min(...vs),rg=mx-mn||1;
+  const X=i=>3+i*(W-6)/(v.length-1),Y=x=>H-4-(x-mn)/rg*(H-8);let d='',pen=false;
+  v.forEach((x,i)=>{if(x==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1);pen=true});const li=v.length-1;
+  return `<svg class="spk" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><title>Últimos 6 periodos de 30 días: ${v.map(x=>x==null?'–':Math.round(x)).join(' · ')}</title><path d="${d}" fill="none" stroke="var(--s4)" stroke-width="2" stroke-linejoin="round"/>${v[li]!=null?`<circle cx="${X(li)}" cy="${Y(v[li])}" r="3.5" fill="var(--brand)"/>`:''}</svg>`}
+const dCnt=(a,b)=>{if(!b)return '<span class="neu">sin base previa</span>';const d=Math.round((a-b)/b*100);return `<span class="${Math.abs(d)<3?'neu':d>0?'up':'down'}">${d>0?'▲':d<0?'▼':'='} ${Math.abs(d)}% vs 30 días previos</span>`};
+const dPts=(a,b)=>{if(a==null||b==null)return '<span class="neu">sin base previa</span>';const d=Math.round(a-b);return `<span class="${Math.abs(d)<2?'neu':d>0?'up':'down'}">${d>0?'▲':d<0?'▼':'='} ${Math.abs(d)} pts vs 30 días previos</span>`};
+const pc=v=>v==null?'–':Math.round(v)+'%';
+function tile({l,v,s,meta,sub,tr,tip,go}){
+  return `<div class="tile ${go?'go':''}" ${go?`data-go="${go}"`:''}><div class="l">${l}${tip?info(tip):''}</div>
+   <div class="vrow"><span class="v">${v}</span>${tr||''}</div>
+   ${s?`<div>${chip(s,(/^(meta|base)/.test(meta)?STL[s]:'')+meta)}</div>`:meta?`<div class="m">${meta}</div>`:''}<div class="m">${sub||''}</div></div>`}
+// barra horizontal segmentada (fina): parts=[{v,c,n}]
+const hb=(parts,max)=>{const tot=parts.reduce((s,p)=>s+p.v,0),cl=max&&tot>max;return `<div class="hb${cl?" clip":""}" style="width:${max?Math.min(100,Math.max(4,100*tot/max)):100}%" ${cl?`title="Fuera de escala: ${tot}"`:""}>${parts.filter(p=>p.v).map(p=>`<i style="flex:${p.v};background:${p.c}" title="${esc(p.n)}: ${p.v}"></i>`).join('')}</div>`};
+const PAISES=['COL','MEX','DOM','CRI'];
+HOOKS.go=()=>document.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{const g=el.dataset.go;if(g.startsWith('lista:')){window.__preAl=g.slice(6);TAB='lista'}else TAB=g;render();scrollTo(0,0)});
+
+// ===== Resumen: ¿cómo va el equipo? =====
+VIEWS.resumen=f=>{
+  const rs=base(f),c=M(rs,inCur),p=M(rs,inPrev),W6=[5,4,3,2,1,0].map(k=>M(rs,win(k)));
+  const V={ag:0,info:0,mig:0,cic:0};rs.forEach(r=>{const k=venc(r);if(k)V[k]++});
+  const A=(DATA.act?DATA.act.filas:[]).filter(x=>!/curso/.test(x.q)&&(f.seg==='Todos'||x.seg===f.seg));const lastQ=A.length?A[A.length-1].q:null;
+  const AQ=A.filter(x=>x.q===lastQ),aN=AQ.reduce((s,x)=>s+x.n,0),aA=AQ.reduce((s,x)=>s+x.a,0),aP=aN?100*aA/aN:null;
+  const sS=c.del>=MINN?stOf(c.sla,META_PCT):'na',sA=c.ag>=MINN?stOf(c.agp,META_PCT):'na';
+  // por país (últimos 30 días) — siempre los 4 países, con el resto de filtros
+  const rp=base({...f,pais:'Todos'});
+  const filas=PAISES.map(pa=>{const x=rp.filter(r=>r.pa===pa),m=M(x,inCur),mp=M(x,inPrev),v=x.filter(r=>venc(r)&&venc(r)!=='cic').length,o=x.filter(r=>r.open).length;return{pa,m,mp,v,o}});
+  const cell=(v,n,meta)=>{if(n<MINN)return `<td class="c-na" title="Solo ${n} casos: muy pocos para un %">${n?pc(v):'–'} <span class="sub">n=${n}</span></td>`;const s=stOf(v,meta);return `<td class="c-${s}"><span class="ico ${s}">${ICO[s]}</span> <b>${pc(v)}</b> <span class="sub">n=${n}</span></td>`};
+  const mx=`<table class="mx"><thead><tr><th class="l">País</th><th>Clientes onboardeados</th><th>Migración ≤6 días</th><th>Agendado ≤48 h</th><th>Completan el proceso</th><th>Atrasados hoy</th></tr></thead><tbody>${
+    filas.map(x=>`<tr class="${f.pais===x.pa?'sel':''}"><td class="l"><b>${x.pa}</b></td><td><b>${x.m.cie}</b> <span class="sub">${x.mp.cie?((x.m.cie>x.mp.cie?'▲ desde ':x.m.cie<x.mp.cie?'▼ desde ':'= igual que ')+x.mp.cie):''}</span></td>
+      ${cell(x.m.sla,x.m.del,META_PCT)}${cell(x.m.agp,x.m.ag,META_PCT)}<td>${pc(x.m.comp)} <span class="sub">${x.m.cie+x.m.nc?'de '+(x.m.cie+x.m.nc):''}</span></td>
+      <td class="${x.v?'c-bad':''}">${x.v?`<span class="ico bad">✕</span> <b>${x.v}</b> <span class="sub">de ${x.o} abiertos</span>`:'0'}</td></tr>`).join('')}</tbody></table>`;
+  const ms=meses.slice(-6),bym=ms.map(m=>M(rs,dt=>mes(dt)===m));
+  return `<div class="tiles">
+   ${tile({l:'Clientes onboardeados',v:c.cie,tr:spark(W6.map(x=>x.cie)),sub:dCnt(c.cie,p.cie),tip:'Clientes que terminaron el onboarding (llegaron a Cierre en Adopción New o a Completada en el pipeline viejo) en los últimos 30 días.'})}
+   ${tile({l:'Migración en ≤6 días hábiles',v:pc(c.sla),s:sS,meta:`meta ${META_PCT}%`,tr:spark(W6.map(x=>x.sla)),sub:`${c.del} entregadas · ${dPts(c.sla,p.sla)}`,go:'sla',tip:'Desde que llega la información hasta que se entrega la migración. Ambos pipelines; el detalle está en SLA y tiempos.'})}
+   ${tile({l:'Agendado en ≤48 h hábiles',v:pc(c.agp),s:sA,meta:`meta ${META_PCT}%`,tr:spark(W6.map(x=>x.agp)),sub:`${c.ag} entraron a Working · ${dPts(c.agp,p.agp)}`,tip:'De los casos que entraron a Working (Adopción New) y ya tienen 48 h hábiles de vida, % que agendó el kick-off dentro de 48 h hábiles. Cuenta también a los que nunca agendaron. Responsable: Sales.'})}
+   ${tile({l:'Completan el proceso',v:pc(c.comp),tr:spark(W6.map(x=>x.comp)),sub:`${c.cie} de ${c.cie+c.nc} salidas · ${dPts(c.comp,p.comp)}`,tip:'Onboardeados / (onboardeados + no completados) en los últimos 30 días.'})}
+   ${tile({l:'Activan tras el cierre',v:pc(aP),s:aP==null?null:stOf(aP,BASE_ACT),meta:`base ${BASE_ACT}% (jun-26)`,sub:lastQ?`${aA} de ${aN} · cierres ${lastQ} · todos los países`:'sin corte',go:'ret',tip:'Empresa con al menos 1 evento de valor en los 30 días tras el cierre. Viene de Metabase, último trimestre maduro.'})}
+  </div>
+  <div class="sec">Atrasados hoy, por responsable</div>
+  <div class="tiles">${['ag','info','mig','cic'].map(k=>tile({l:VENC[k][0],v:V[k],s:V[k]?'bad':'good',meta:V[k]?'fuera de meta':'al día',sub:'le toca a <b>'+VENC[k][1]+'</b> · ver casos →',go:'lista:'+VENC[k][2]})).join('')}</div>
+  <div class="sec">Por país · últimos 30 días</div>
+  <div class="card"><div style="overflow-x:auto">${mx}</div></div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h3>Clientes onboardeados por mes</h3>${bars([{n:'Onboardeados',c:'var(--brand)',v:bym.map(x=>x.cie)}],ms.map(mlab),{partial:mlab(MES_ACT),h:190})}</div>
+   <div class="card"><h3>Migración en ≤6 días, por mes</h3>${line([{n:'% en ≤6 días hábiles',c:'var(--brand)',v:bym.map(x=>x.del>=MINN?Math.round(x.sla):null)}],ms.map((m,i)=>mlab(m)+' · n='+bym[i].del),{goal:META_PCT,h:190})}</div>
+  </div>`;
+};
+HOOKS.resumen=HOOKS.go;
+
+// ===== Embudo: ¿dónde perdemos clientes? =====
+const PASOS=[['ING','Entró a trabajo',''],['KICK','Agendó','Sales'],['SOL','Tuvo el kick-off','Adoption'],['PROC','Entregó la información','Sales / cliente'],['CIC','Recibió la migración','Analista'],['CIE','Cerrado','Analista']];
+function embudo(rs){return PASOS.map(([k])=>k==='ING'?rs.length:rs.filter(r=>r.reach(k)).length)}
+VIEWS.embudo=f=>{
+  const all=base(f).filter(r=>r.p==='N'&&!r.retro&&!r.band&&inR(f,r.ing));
+  const mad=all.filter(r=>cd(r.ing,TODAY)>=30),use=mad.length>=10?mad:all,e=embudo(use);
+  let w=null;for(let i=1;i<e.length;i++){const dr=e[i-1]?1-e[i]/e[i-1]:0;if(!w||dr>w.d)w={i,d:dr}}
+  const rows=e.map((v,i)=>{const conv=i&&e[i-1]?v/e[i-1]:null,isW=w&&i===w.i;
+    return `<div class="frow ${isW?'worst':''}"><div><b>${PASOS[i][1]}</b>${PASOS[i][2]?`<div class="sub">le toca a ${PASOS[i][2]}</div>`:''}</div>
+     <div class="ftrack"><div class="fbar" style="width:${e[0]?100*v/e[0]:0}%"></div></div>
+     <div class="fnum"><b>${v}</b>${i?` <span class="${isW?'stt bad':'sub'}">${isW?'<i>✕</i>':''}${conv==null?'–':'pasa '+Math.round(conv*100)+'%'}</span>`:''}</div></div>`}).join('');
+  // por país y segmento: % paso a paso, peor paso marcado
+  const seg=[];for(const pa of PAISES)for(const s of ['Contador','Pyme']){const x=use.filter(r=>r.pa===pa&&r.seg===s);if(x.length<8)continue;const ee=embudo(x);
+    const cv=ee.slice(1).map((v,i)=>ee[i]?v/ee[i]:null);let wi=-1,wv=2;cv.forEach((c,i)=>{if(c!=null&&ee[i]>=3&&c<wv){wv=c;wi=i}});seg.push({pa,s,n:x.length,cv,wi,fin:ee[5]/ee[0]})}
+  // abiertos hoy por etapa: en tiempo vs atrasados
+  const op=base(f).filter(r=>r.open&&r.p==='N');const ET=[['WORK','Esperando agendar','Sales','ag'],['KICK','Kick-off agendado','Adoption',null],['SOL','Esperando información','Sales / cliente','info'],['PROC','En migración','Analista','mig'],['CIC','En capacitación','Analista','cic']];
+  const et=ET.map(([k,n,du,vk])=>{const x=op.filter(r=>r.st===k),a=vk?x.filter(r=>venc(r)===vk).length:0;return{k,n,du,t:x.length,a}});const mxo=Math.max(1,...et.map(x=>x.t));
+  return `<div class="hero"><span class="big">−${w?Math.round(w.d*100):0}%</span><span class="what">se pierde entre <b>${w?PASOS[w.i-1][1].toLowerCase():''}</b> y <b>${w?PASOS[w.i][1].toLowerCase():''}</b> · le toca a <b>${w?PASOS[w.i][2]:''}</b><br><span class="sub">${use.length} casos de Adopción New ${use===mad?'con 30+ días de vida':'del periodo'}</span></span></div>
+  <div class="grid two">
+   <div class="card"><h3>Embudo ${info('Cada paso cuenta los casos que llegaron a esa etapa o a una posterior. Solo casos con 30+ días desde que entraron, para que los recién llegados no parezcan perdidos. Excluye cargas retroactivas y la bandeja New.')}</h3>${rows}</div>
+   <div class="card"><h3>Abiertos hoy: ¿en tiempo o atrasados?</h3>
+    ${et.map(x=>`<div class="frow sm"><div><b>${x.n}</b><div class="sub">${x.du}</div></div><div>${hb([{v:x.t-x.a,c:'var(--brand)',n:'En tiempo'},{v:x.a,c:'var(--st-bad)',n:'Atrasados'}],mxo)}</div><div class="fnum"><b>${x.t}</b>${x.a?` <span class="stt bad"><i>✕</i>${x.a} atrasados</span>`:''}</div></div>`).join('')}
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--brand)"></i>En tiempo</span><span><i style="background:var(--st-bad)"></i>Atrasados (fuera de meta)</span></div></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>¿Dónde se cae cada país? ${info('% que pasa de un paso al siguiente. Marcado en rojo el paso donde más se pierde en cada fila.')}</h3>
+   <div class="scroll"><table><thead><tr><th class="l">País</th><th class="l">Segmento</th><th>Casos</th>${PASOS.slice(1).map(p=>`<th>${p[1]}</th>`).join('')}<th>Llegan a cierre</th></tr></thead><tbody>
+   ${seg.map(x=>`<tr><td class="l"><b>${x.pa}</b></td><td class="l">${x.s}</td><td>${x.n}</td>${x.cv.map((c,i)=>i===x.wi?`<td class="c-bad"><span class="ico bad">✕</span> <b>${pc(c==null?null:c*100)}</b></td>`:`<td>${pc(c==null?null:c*100)}</td>`).join('')}<td><b>${pc(x.fin*100)}</b></td></tr>`).join('')}</tbody></table></div></div>`;
+};
+
+// ===== Equipo: ¿cómo rinde cada analista? =====
+// Scorecard acordado con Jhonatan 2026-11-10. Cuatro números por analista:
+//  1. Onboardeados/mes: empresas únicas llevadas a Cierre (Adopción New) o Completada (viejo), por fecha de cierre.
+//  2. Completa a 60 días: cohorte = mes de la primera sesión REALIZADA; a los 60 días se mira el estado:
+//     onboardeado ÷ (onboardeado + abandonos que le tocan al analista). Abandono = No completado después de una sesión.
+//     Abandono en «Solicitud de información» (esperando info) le toca a Sales / cliente, no al analista.
+//     Los que siguen abiertos a los 60 días quedan aparte («en curso»). Solo cohortes que ya cumplieron 60 días.
+//  3. Migración ≤ 6 días hábiles (método SLA ya acordado).
+//  4. Activación de lo onboardeado: ≥1 evento de valor entre el inicio del mes de cierre y el fin del mes siguiente (Metabase).
+// Fuera del analista: cerrados sin iniciar (nunca hubo sesión → agendamiento, Sales) y calidad del dato (No completado sin motivo).
+const EDAD=60, META_COMP=80;
+const emp=r=>r.idc||('t'+r.id);
+const uniq=a=>new Set(a.map(emp)).size;
+const addM=(m,n)=>{let[y,mm]=m.split('-').map(Number);mm+=n;while(mm>12){mm-=12;y++}return y+'-'+String(mm).padStart(2,'0')};
+const ACT_CORTE=DATA.actA?DATA.actA.corte:null;
+const actMad=r=>ACT_CORTE&&r.fin&&addM(mes(r.fin),2)+'-01'<=ACT_CORTE;   // ventana de activación ya cerrada
+const abD=r=>r.abSt==='SOL'?'Sales / cliente':'Analista';
+// estado de la cohorte a los 60 días de la primera sesión realizada
+function coh(r){const lim=addD(r.s1,EDAD);
+  if(r.fin&&r.fin<=lim)return 'ok'; if(r.ncd&&r.ncd<=lim)return r.abSt==='SOL'?'abS':'abA'; return 'cur';}
+function card(x,f){ // x = registros de un analista (o del equipo)
+  const nm=mesesR(f).length;
+  const on=x.filter(r=>inR(f,r.fin)),c=uniq(on);
+  const del=x.filter(r=>r.mig&&inR(f,r.mig[2])),ok=del.filter(r=>r.mig[0]<=META_MIG).length;
+  const ch=x.filter(r=>r.s1&&!r.retro&&inR(f,r.s1)&&addD(r.s1,EDAD)<=TODAY).map(coh);
+  const k={ok:0,abA:0,abS:0,cur:0};ch.forEach(s=>k[s]++);
+  const am=on.filter(r=>r.act!=null&&actMad(r)),aOk=uniq(am.filter(r=>r.act)),aN=uniq(am);
+  const nc=x.filter(r=>inR(f,r.ncd)),ab=uniq(nc.filter(r=>r.sh)),s0=uniq(nc.filter(r=>!r.sh)),sinMot=nc.filter(r=>!r.mot).length;
+  return {c,cm:nm?c/nm:null,del:del.length,sla:del.length?100*ok/del.length:null,md:med(del.map(r=>r.mig[0])),
+    k,cn:k.ok+k.abA,comp:k.ok+k.abA?100*k.ok/(k.ok+k.abA):null,aN,act:aN?100*aOk/aN:null,
+    ab,s0,nc:nc.length,mot:nc.length?100*(nc.length-sinMot)/nc.length:null};
+}
+const cell=(v,n,meta,fmt=pc)=>v==null?'<td class="c-na">–</td>':n<MINN?`<td class="c-na" title="Pocos casos (${n})">${fmt(v)} <span class="sub">n=${n}</span></td>`:
+  `<td class="c-${stOf(v,meta)}"><span class="ico ${stOf(v,meta)}">${ICO[stOf(v,meta)]}</span> <b>${fmt(v)}</b> <span class="sub">n=${n}</span></td>`;
+VIEWS.equipo=f=>{
+  const rs=base(f,{ignOw:true}).filter(r=>!r.band);
+  const names=[...new Set(rs.filter(r=>r.ow&&(r.open||inR(f,r.fin)||inR(f,r.ncd)||(r.mig&&inR(f,r.mig[2]))||(r.s1&&inR(f,r.s1)))).map(r=>r.ow))];
+  let rows=names.map(o=>{const x=rs.filter(r=>r.ow===o),op=x.filter(r=>r.open);
+    return {o,...card(x,f),op:op.length,mine:op.filter(r=>r.p==='N'&&['KICK','PROC','CIC'].includes(r.st)).length,wait:op.filter(r=>r.p==='N'&&['WORK','SOL'].includes(r.st)).length,
+      old:op.filter(r=>r.p==='O').length,at:op.filter(r=>['mig','cic'].includes(venc(r))).length}})
+    .filter(r=>r.c>0||r.del>0||r.cn>0||r.nc>0||r.op>=3);
+  const ORDEN=window.__eqSort||'c';
+  rows.sort(ORDEN==='op'?(a,b)=>b.op-a.op||b.c-a.c:(a,b)=>b.c-a.c||b.del-a.del||b.op-a.op);
+  window.__eq=rows;const ops=rows.map(r=>r.op).sort((a,b)=>b-a),mxo=Math.max(1,ops.length>1?ops[1]*1.15:ops[0]||1);
+  const T=card(rs.filter(r=>r.ow),f),per=`${mlab(f.desde)}–${mlab(f.hasta)}`;
+  const sinOw=rs.filter(r=>r.open&&!r.ow&&(r.p==='O'||ORD[r.st]>=ORD.KICK)).length;
+  const madHasta=addD(TODAY,-EDAD);
+  const sel=window.__eqSel&&rows.find(r=>r.o===window.__eqSel)?window.__eqSel:'';
+  const th=(k,txt,tip)=>`<th class="srt" data-s="${k}" style="cursor:pointer">${txt}${tip?info(tip):''}${ORDEN===k?' ▾':''}</th>`;
+  return `<div class="tiles">
+   ${tile({l:'1 · Onboardeados por mes',v:f0(T.cm==null?null:Math.round(T.cm)),meta:`${T.c} empresas en ${per}`,sub:'promedio mensual del equipo · el mes en curso va parcial',tip:'Empresas únicas llevadas a Cierre (Adopción New) o Completada (pipeline viejo), por fecha de cierre.'})}
+   ${tile({l:`2 · Completa a ${EDAD} días`,v:pc(T.comp),s:T.cn>=MINN?stOf(T.comp,META_COMP):'na',meta:`meta tentativa ${META_COMP}%`,sub:`${T.k.ok} de ${T.cn} que arrancaron · ${T.k.cur} seguían abiertos a los ${EDAD} d`,tip:`Cohorte = casos cuya primera sesión realizada cae en el periodo y ya cumplieron ${EDAD} días (hasta ${madHasta}). Onboardeado ÷ (onboardeado + abandonos del analista). Abandono en espera de información le toca a Sales/cliente y no cuenta aquí.`})}
+   ${tile({l:'3 · Migración en ≤6 días',v:pc(T.sla),s:T.del>=MINN?stOf(T.sla,META_PCT):'na',meta:`meta ${META_PCT}%`,sub:`${T.del} entregadas en ${per}`})}
+   ${tile({l:'4 · Activan lo onboardeado',v:pc(T.act),s:T.aN>=MINN?stOf(T.act,BASE_ACT):'na',meta:`base ${BASE_ACT}%`,sub:T.aN?`${T.aN} empresas con ventana cerrada`:'ventana de activación aún abierta',tip:'≥1 evento de valor entre el inicio del mes de cierre y el fin del mes siguiente (Metabase, corte '+(ACT_CORTE||'–')+'). Solo cierres cuya ventana ya terminó.'})}
+  </div>
+  <div class="sub" style="margin:14px 0 6px;font-weight:600">Fuera del analista</div>
+  <div class="tiles">
+   ${tile({l:'Cerrados sin iniciar',v:T.s0,meta:'le toca a Sales (agendamiento)',sub:`No completado sin ninguna sesión realizada · ${per}`})}
+   ${tile({l:'Abandonaron esperando información',v:T.k.abS,meta:'le toca a Sales / cliente',sub:`de la cohorte a ${EDAD} días`})}
+   ${tile({l:'No completados con motivo',v:pc(T.mot),s:T.nc>=MINN?stOf(T.mot,META_PCT):'na',meta:`meta ${META_PCT}%`,sub:`${T.nc} cierres a No completado en ${per}`,tip:'Calidad del dato: cada No completado debería llevar su motivo en HubSpot.'})}
+   ${tile({l:'Abiertos sin owner',v:sinOw,s:sinOw?'warn':'good',meta:sinOw?'sin responsable':'todos asignados',sub:'desde Kick-off o pipeline viejo'})}
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Cada analista · ${per} <span class="sub" style="font-weight:400">· clic en una fila para ver su gestión</span></h3>
+   <div style="overflow-x:auto"><table class="eq"><thead><tr><th class="l">Analista</th>${th('c','1 · Onboardeados','Empresas cerradas en el periodo (promedio por mes debajo)')}<th>2 · Completa a ${EDAD} d</th><th>3 · Migración ≤6 d</th><th>4 · Activan</th><th>No completados con motivo</th><th class="l srt" data-s="op" style="cursor:pointer;min-width:190px">Carga abierta hoy${ORDEN==='op'?' ▾':''}</th><th>Atrasados</th></tr></thead><tbody>
+   ${rows.map((x,i)=>`<tr class="click${x.o===sel?' sel':''}" data-i="${i}"><td class="l"><b>${esc(x.o)}</b></td>
+     <td><b>${x.c}</b> <span class="sub">${f0(x.cm==null?null:Math.round(x.cm*10)/10)}/mes</span></td>
+     ${cell(x.comp,x.cn,META_COMP)}${cell(x.sla,x.del,META_PCT)}${cell(x.act,x.aN,BASE_ACT)}${cell(x.mot,x.nc,META_PCT)}
+     <td class="l"><div class="carga"><div class="hbw">${hb([{v:x.mine,c:'var(--brand)',n:'En sus manos'},{v:x.wait,c:'var(--s2)',n:'Esperando a Sales o al cliente'},{v:x.old,c:'var(--s4)',n:'Pipeline viejo'}],mxo)}</div><b>${x.op}</b></div></td>
+     <td>${x.at?`<span class="ico bad">✕</span> <b>${x.at}</b>`:'<span class="sub">0</span>'}</td></tr>`).join('')}</tbody></table></div>
+   <div class="legend" style="margin-top:8px"><span>n = casos detrás del %; gris = menos de ${MINN}, no es confiable</span><span>Completa a ${EDAD} d: primera sesión en ${per} y madura (hasta ${madHasta})</span><span><i style="background:var(--brand)"></i>En sus manos</span><span><i style="background:var(--s2)"></i>Esperando a Sales o al cliente</span><span><i style="background:var(--s4)"></i>Pipeline viejo</span></div>
+   <div class="note">En el pipeline viejo no queda registro de la etapa donde abandonó el cliente, así que esos abandonos se le asignan al analista. La cohorte a ${EDAD} días se llena sola a medida que maduran los casos del pipeline nuevo.</div></div>
+  <div class="card" id="eqDet" style="margin-top:12px"></div>`;
+};
+function eqDetalle(f,o){
+  const box=$('eqDet');if(!box)return;
+  const rs=base(f,{ignOw:true}).filter(r=>!r.band&&(o==='Equipo'?!!r.ow:r.ow===o));
+  const cer=rs.filter(r=>inR(f,r.fin)||inR(f,r.ncd)).map(r=>{const ok=!!r.fin&&inR(f,r.fin);return {r,ok,k:ok?'ok':r.sh?'ab':'si',fe:ok?r.fin:r.ncd}})
+    .sort((a,b)=>b.fe.localeCompare(a.fe));
+  const ms=mesesR(f),serie=ms.map(m=>({m,c:uniq(cer.filter(x=>x.k==='ok'&&mes(x.fe)===m).map(x=>x.r)),n:uniq(cer.filter(x=>x.k==='ab'&&mes(x.fe)===m).map(x=>x.r))}));
+  const mx=Math.max(1,...serie.map(s=>s.c+s.n));
+  const nOpen=rs.filter(r=>r.open).length;
+  box.innerHTML=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h3 style="margin:0">Gestión realizada · ${esc(o)}</h3><span class="sub">${mlab(f.desde)}–${mlab(f.hasta)}</span><span class="sp" style="flex:1"></span>
+    ${o!=='Equipo'?`<button id="eqAll">Ver todo el equipo</button><button id="eqOpen">Ver sus ${nOpen} abiertos →</button>`:''}</div>
+   <div class="gbar">${serie.map(s=>`<div class="col"><b style="color:var(--ink)">${s.c+s.n||''}</b><div class="stk" style="height:${Math.round(60*(s.c+s.n)/mx)}px">${s.c?`<i style="flex:${s.c};background:var(--brand)" title="Onboardeados: ${s.c}"></i>`:''}${s.n?`<i style="flex:${s.n};background:var(--s3)" title="Abandonaron: ${s.n}"></i>`:''}</div>${mlab(s.m)}${s.m===MES_ACT?'*':''}</div>`).join('')}</div>
+   <div class="legend"><span><i style="background:var(--brand)"></i>Onboardeados</span><span><i style="background:var(--s3)"></i>Abandonaron (tras una sesión)</span><span>Por mes de cierre; no incluye los cerrados sin iniciar</span><span>* mes en curso (parcial)</span></div>
+   <div class="chips" style="margin-top:10px"><button class="chipb on" data-k="">Onboardeados + abandonaron <b>${cer.filter(x=>x.k!=='si').length}</b></button><button class="chipb" data-k="ok">Onboardeados <b>${cer.filter(x=>x.k==='ok').length}</b></button><button class="chipb" data-k="ab">Abandonaron <b>${cer.filter(x=>x.k==='ab').length}</b></button><button class="chipb" data-k="si">Cerrados sin iniciar <b>${cer.filter(x=>x.k==='si').length}</b></button><span class="sp"></span><input id="eqQ" placeholder="Buscar cliente o ID"><button id="eqCsv">Descargar CSV</button></div>
+   <div id="eqTab"></div><div class="note">Una fila por ticket (en el pipeline viejo una empresa puede tener ticket de migración y de implementación). Días = calendario desde que entró a trabajo hasta el cierre.</div>`;
+  let k='';
+  const actTxt=r=>r.act==null?'–':!actMad(r)?'<span class="sub">en curso</span>':r.act?chip('good','Sí'):chip('bad','No');
+  const cols=[{h:'Caso',f:x=>`<a href="${HS(x.r.id)}" target="_blank" rel="noopener">${esc(x.r.n||x.r.id)}</a>`,l:1},
+    ...(o==='Equipo'?[{h:'Analista',f:x=>esc(x.r.ow),l:1}]:[]),
+    {h:'Resultado',f:x=>x.k==='ok'?chip('good','Onboardeado'):x.k==='ab'?chip('warn','Abandonó'):chip('na','Sin iniciar'),l:1},{h:'Fecha cierre',f:x=>x.fe},{h:'1.ª sesión',f:x=>x.r.s1||'–'},
+    {h:'País',f:x=>x.r.pa},{h:'Segmento',f:x=>x.r.seg},
+    {h:'Pipeline',f:x=>x.r.p==='N'?'Adopción New':'Viejo'+(x.r.tp==='M'?' · migración':x.r.tp==='I'?' · implementación':''),l:1},
+    {h:'Días a cierre',f:x=>x.r.retro?'<span class="sub">carga retroactiva</span>':f0(cd(x.r.ing,x.fe))},{h:'Migración (días háb.)',f:x=>x.r.mig?f0(x.r.mig[0]):'–'},
+    {h:'Activó',f:x=>x.k==='ok'?actTxt(x.r):''},
+    {h:'Abandonó en',f:x=>x.k==='ab'?(x.r.abSt?LAB[x.r.abSt]:'<span class="sub">sin dato (viejo)</span>'):'',l:1},
+    {h:'Le toca a',f:x=>x.k==='ab'?abD(x.r):x.k==='si'?'Sales':'',l:1},
+    {h:'Motivo',f:x=>x.ok?'':`<span class="sub">${esc(x.r.mot||'sin motivo')}</span>`,l:1}];
+  const draw=()=>{const q=$('eqQ').value.toLowerCase();box.querySelectorAll('.chipb').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+    const x=cer.filter(y=>(k?y.k===k:y.k!=='si')&&(!q||(y.r.n+' '+y.r.id+' '+y.r.idc).toLowerCase().includes(q)));window.__eqF=x;
+    $('eqTab').innerHTML=x.length?table(cols,x.slice(0,600))+(x.length>600?`<div class="note">Mostrando 600 de ${x.length}. Descarga el CSV para verlos todos.</div>`:''):'<div class="note">Sin cierres en el periodo con estos filtros.</div>'};
+  box.querySelectorAll('.chipb').forEach(b=>b.onclick=()=>{k=b.dataset.k;draw()});$('eqQ').oninput=draw;draw();
+  $('eqCsv').onclick=()=>{const h=['id','cliente','analista','resultado','fecha_cierre','primera_sesion','pais','segmento','pipeline','dias_a_cierre','migracion_dias_habiles','activo','abandono_en','le_toca_a','motivo','link'];
+    const L=[h.join(',')].concat(window.__eqF.map(x=>[x.r.id,x.r.n,x.r.ow,x.k==='ok'?'Onboardeado':x.k==='ab'?'Abandono':'Sin iniciar',x.fe,x.r.s1||'',x.r.pa,x.r.seg,x.r.p==='N'?'Adopcion New':'Viejo',x.r.retro?'':cd(x.r.ing,x.fe),x.r.mig?x.r.mig[0]:'',
+      x.k==='ok'?(x.r.act==null?'':!actMad(x.r)?'en curso':x.r.act?'si':'no'):'',x.k==='ab'&&x.r.abSt?LAB[x.r.abSt]:'',x.k==='ab'?abD(x.r):x.k==='si'?'Sales':'',x.ok?'':x.r.mot,HS(x.r.id)].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')));
+    const b=new Blob(['﻿'+L.join('\n')],{type:'text/csv'});const u=URL.createObjectURL(b);const A=document.createElement('a');A.href=u;A.download='connect_cerrados_'+(o==='Equipo'?'equipo':o.replace(/\s+/g,'_'))+'_'+TODAY+'.csv';A.click()};
+  if($('eqAll'))$('eqAll').onclick=()=>{window.__eqSel='';render()};
+  if($('eqOpen'))$('eqOpen').onclick=()=>{$('fOw').value=o;TAB='lista';render();scrollTo(0,0)};
+}
+HOOKS.equipo=f=>{
+  document.querySelectorAll('table.eq tr.click').forEach(tr=>tr.onclick=()=>{window.__eqSel=window.__eq[+tr.dataset.i].o;render();$('eqDet').scrollIntoView({behavior:'smooth',block:'start'})});
+  document.querySelectorAll('th.srt').forEach(t=>t.onclick=()=>{window.__eqSort=t.dataset.s;render()});
+  const o=window.__eqSel&&window.__eq.find(r=>r.o===window.__eqSel)?window.__eqSel:(f.ow!=='Todos'&&f.ow!=='(sin owner)'?f.ow:'Equipo');
+  eqDetalle(f,o);
+};
+
+// ===== Activación y retención: ¿Connect hace que se queden? =====
+VIEWS.ret=f=>{
+  // ===== Retención por cohorte mensual (mes del primer pago) =====
+  const R=DATA.ret,MD=(R.mensual&&R.mensual.rows)||[],CORTE_M=R.mensual?R.mensual.ultimoMes:202609;
+  const addM=(k,n)=>{let y=Math.floor(k/100),m=k%100+n;y+=Math.floor((m-1)/12);m=(m-1)%12+1;return y*100+m};
+  const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'],mk=k=>MES[k%100-1]+' '+Math.floor(k/100);
+  // 4 grupos por segmento, del más cercano a Connect al más lejano
+  const GR=[['Completó Connect','1'],['Tuvo sesión, no completó','2'],['Nunca entró a Connect','S']];
+  const SEGC={Pyme:'P',Contador:'C'};
+  const cube=(seg,gi)=>{const code=GR[gi][1]==='S'?'S':SEGC[seg]+GR[gi][1],o={};
+    for(const [g,fpk,off,acc,n] of MD){// 'Nunca entró' = base sin Connect + quienes entraron pero nunca se agendaron (pedido de Jhonatan 5-nov)
+      if(code==='S'?!(g==='S'||g===SEGC[seg]+'3'):g!==code)continue;if(g==='S'&&seg==='Contador'&&!acc)continue;(o[fpk]=o[fpk]||Array(13).fill(0))[off]+=n}
+    return o};
+  const pooled=(o,k)=>{let a=0,b=0;for(const fpk in o){if(addM(+fpk,k)>CORTE_M)continue;a+=o[fpk][0];b+=o[fpk][k]}return a>=20?{p:100*b/a,n:a}:{p:null,n:a}};
+  const HOY=(R.hoy&&R.hoy.n)||{},HOYM=R.hoy?mk(R.hoy.mes):'hoy',ZM=R.zoom||[];
+  const st=window.__coh=window.__coh||{seg:f.seg==='Contador'?'Contador':'Pyme',g:0,mode:'p'};
+  if(f.seg!=='Todos')st.seg=f.seg;
+  window.__cohHTML=()=>{const o=cube(st.seg,st.g),ks=Object.keys(o).map(Number).sort((a,b)=>b-a);
+    const btn=(on,txt,js)=>`<button class="chipb${on?' on':''}" onclick="${js}">${txt}</button>`;
+    const head=`<div class="cohctl"><div class="chips">${['Pyme','Contador'].map(s=>btn(st.seg===s,s,`__cohSet('seg','${s}')`)).join('')}</div>
+      <div class="chips">${GR.map(([n],i)=>btn(st.g===i,n,`__cohSet('g',${i})`)).join('')}</div>
+      <div class="chips">${btn(st.mode==='p','%',"__cohSet('mode','p')")}${btn(st.mode==='n','Empresas',"__cohSet('mode','n')")}</div></div>`;
+    const rows=ks.map(k=>{const v=o[k],n0=v[0],low=n0<10;
+      const hN=HOY[`${st.seg}|${st.g}|${k}`],hP=n0&&hN!=null?Math.min(100,100*hN/n0):null,hTip=`${mk(k)} · pagan hoy (${HOYM}) · ${hN} de ${n0}`;
+      const hTd=hP==null?'<td class="st hoy na">–</td>':low?`<td class="st hoy low" title="${hTip}">${st.mode==='p'?hP.toFixed(0)+'%':hN}</td>`:`<td class="st hoy" style="--a:${Math.max(0,Math.min(1,(hP-30)/70)).toFixed(2)};${hP>=70?'color:#fff':''}" title="${hTip}"><b>${st.mode==='p'?hP.toFixed(0)+'%':hN.toLocaleString('es')}</b></td>`;
+      return `<tr class="click${st.zcoh===k?' selrow':''}" onclick="__zoomCoh(${k})" title="Ver por qué se fueron los de ${mk(k)}"><td class="l"><b>${mk(k)}</b></td><td class="n0">${n0.toLocaleString('es')}</td>${hTd}${Array.from({length:12},(_,i)=>i+1).map(m=>{
+        if(addM(k,m)>CORTE_M)return '<td class="st na">—</td>';
+        const p=n0?100*v[m]/n0:null,tip=`${mk(k)} · Mes ${m} · ${v[m]} de ${n0} = ${p==null?'–':p.toFixed(1)+'%'}`;
+        const txt=st.mode==='p'?(p==null?'–':p.toFixed(0)+'%'):v[m].toLocaleString('es');
+        return low?`<td class="st low" title="${tip} (muy pocas empresas)">${txt}</td>`
+          :`<td class="st" style="--a:${Math.max(0,Math.min(1,(p-30)/70)).toFixed(2)};${p>=70?'color:#fff':''}" title="${tip}">${txt}</td>`}).join('')}</tr>`}).join('');
+    return `${head}<div class="scroll"><table class="stair"><thead><tr><th class="l">Empezó a pagar</th><th>Empresas</th><th class="hoy">Hoy</th>${Array.from({length:12},(_,i)=>`<th>Mes ${i+1}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="15" class="sub">Sin empresas en este grupo</td></tr>'}</tbody></table></div>
+      <div class="legend" style="margin-top:6px"><span><b>Hoy</b> = pagan en ${HOYM} (o pasaron a pagar vía su contador) · Mes N = siguen pagando N meses después del primer pago · gris = cohorte con menos de 10 empresas · — = aún no llega a ese mes</span></div>`};
+  // ===== Zoom: ¿por qué se fueron? (mismo formato y método del reporte Retención de Connect Q3) =====
+  // fila zoom: [id, 'Seg|g', cohorte, último mes pagando, causa contable, categoría, motivo, subcausa, evidencia]
+  const ZC=[['PRODUCTO','Problema del producto','prod'],['PAGO','Fallo de cobro','pago'],['PRECIO_O_NEGOCIO','Precio o negocio','gris'],['EXPERIENCIA_CONNECT','Experiencia en Connect','gris'],['NO_ADOPTO','No adoptó: dejó de responder o no asistió','gris'],['SIN_EVIDENCIA','Sin evidencia en notas ni tickets','gris'],['SIN_CLASIFICAR','Aún sin leer','gris']];
+  const ZCOL={prod:'var(--brand)',pago:'var(--st-warn)',gris:'var(--s4)'};
+  window.__zoomHTML=()=>{const key=st.seg+'|'+st.g,G0=GR[st.g][0];
+    if(st.g===2)return '<h3>¿Por qué se fueron?</h3><p class="sub">Quienes nunca entraron a Connect no tienen ticket ni notas para leer. Elige "Completó Connect" o "Tuvo sesión, no completó".</p>';
+    const z=ZM.filter(r=>r[1]===key&&(!st.zcoh||r[2]===st.zcoh)),noch=z.filter(r=>r[5]==='NO_ES_CHURN'),fu=z.filter(r=>r[5]!=='NO_ES_CHURN');
+    const o=cube(st.seg,st.g);let base=0;for(const k in o)if(!st.zcoh||+k===st.zcoh)base+=o[k][0];
+    const cnt=c=>fu.filter(r=>r[5]===c).length,mx=Math.max(1,...ZC.map(([c])=>cnt(c)));
+    const cats=ZC.filter(([c])=>cnt(c)>0);if(!fu.length)return `<h3>¿Por qué se fueron? · ${st.seg} · ${G0}${st.zcoh?' · cohorte '+mk(st.zcoh):''}</h3><div class="chips" style="margin:4px 0">${st.zcoh?`<button class="chipb on" onclick="__zoomCoh(null)">Cohorte ${mk(st.zcoh)} ✕</button>`:''}</div><p class="sub">Ninguna empresa de este grupo${st.zcoh?' y cohorte':''} ha dejado de pagar.</p>`;if(!st.zc||!cnt(st.zc))st.zc=(cats.find(x=>x[0]==='PRODUCTO')||cats[0]||[])[0];
+    const pc1=v=>fu.length?Math.round(100*v/fu.length)+'%':'';
+    const nNo=cnt('PRODUCTO')+cnt('PAGO');
+    const bars=cats.map(([c,n,t])=>{const v=cnt(c),on=st.zc===c;return `<div class="mrow click${on?' on':''}" onclick="__zoomSel('${c}')"><div class="mlab">${on?'<b>'+n+'</b>':n}</div><div class="mbar"><div class="fbar" style="width:${100*v/mx}%;background:${ZCOL[t]}"></div><span>${v} · ${pc1(v)}</span></div></div>`}).join('');
+    const sel=fu.filter(r=>r[5]===st.zc),lab=(ZC.find(x=>x[0]===st.zc)||[,''])[1];
+    const groups={};for(const r of sel){const g=r[7]||'Sin detalle';(groups[g]=groups[g]||[]).push(r)}
+    const gl=Object.entries(groups).sort((a,b)=>b[1].length-a[1].length),gmx=Math.max(1,...gl.map(x=>x[1].length));
+    const zcol=ZCOL[(ZC.find(x=>x[0]===st.zc)||[,,'gris'])[2]];
+    const zoom=gl.map(([g,rs])=>`<div class="zg"><div class="zgh"><span>${g}</span><div class="mbar"><div class="fbar" style="width:${100*rs.length/gmx}%;background:${zcol}"></div></div><b>${rs.length} · ${sel.length?Math.round(100*rs.length/sel.length):0}%</b></div>
+      <ul>${rs.sort((a,b)=>b[2]-a[2]).map(r=>`<li>${r[8]||r[6]||'Sin detalle'} <span class="sub">· ID ${r[0]} · ${st.seg} · empezó a pagar ${mk(r[2])} · ${r[4]==='Delinquent'?'fallo de cobro':r[4]==='Voluntary'?'canceló':'sin causa contable'}</span></li>`).join('')}</ul></div>`).join('');
+    return `<h3>¿Por qué se fueron? · ${st.seg} · ${G0}${st.zcoh?' · cohorte '+mk(st.zcoh):''}</h3>${st.zcoh?`<div class="chips" style="margin:4px 0"><button class="chipb on" onclick="__zoomCoh(null)">Cohorte ${mk(st.zcoh)} ✕</button></div>`:'<p class="sub" style="margin:0">Clic en un mes de la escalera para ver solo esa cohorte.</p>'}
+     <p class="sub" style="margin:2px 0 10px"><b>${fu.length}</b> de ${base.toLocaleString('es')} empresas ${st.zcoh?`que empezaron a pagar en <b>${mk(st.zcoh)}</b>`:'(cohortes desde ene-2025)'} hoy no pagan: <b>${pc1(fu.length-nNo)}</b> por causas de Adoption y <b>${pc1(nNo)}</b> por cobro o producto${noch.length?` · ${noch.length} en realidad siguen (pagan vía su contador o cambiaron de ID)`:''}. Una empresa, un motivo. <b>Haz clic en una barra</b> para ver las causas específicas.</p>
+     <div class="mlist">${bars}</div>
+     <div class="zoomc"><h3>Zoom: ${lab} · ${sel.length} empresas</h3><p class="sub" style="margin:2px 0 8px">Agrupado por área o razón, con lo que pasó en cada empresa y el mes en que empezó a pagar.</p>${zoom}</div>
+     <div class="legend" style="margin-top:6px"><span>Mismo método del reporte "Retención de Connect Q3": causa contable de Metabase + issues de HubSpot + notas del ticket, leídas caso por caso</span></div>`};
+  window.__zoomCoh=k=>{st.zcoh=k;st.zc=null;const el=document.getElementById('cohBox');if(el)el.innerHTML=__cohHTML();const z=document.getElementById('zoomBox');if(z){z.innerHTML=__zoomHTML();if(k)z.scrollIntoView({behavior:'smooth',block:'start'})}};
+  window.__zoomSel=c=>{st.zc=c;const z=document.getElementById('zoomBox');if(z)z.innerHTML=__zoomHTML()};
+  window.__cohSet=(k,v)=>{st[k]=v;if(k!=='mode'){st.zc=null;st.zcoh=null}const el=document.getElementById('cohBox');if(el)el.innerHTML=__cohHTML();const z=document.getElementById('zoomBox');if(z)z.innerHTML=__zoomHTML()};
+  window.__cohPick=(s,g)=>{st.seg=s;st.g=g;__cohSet('mode',st.mode);const el=document.getElementById('cohBox');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})};
+  const blocks=['Pyme','Contador'].filter(s=>f.seg==='Todos'||f.seg===s).map(seg=>{
+    // mismo plazo (mes 3) para los dos segmentos; cohortes que ya cumplieron 3 meses
+    const m3=GR.map((_,i)=>pooled(cube(seg,i),3)),gap=m3[0].p!=null&&m3[2].p!=null?Math.round(m3[0].p-m3[2].p):null;
+    return `<div class="card"><h3>${seg} · ¿cuántos siguen pagando al mes 3?</h3>
+     <div class="hero sm"><span class="big">${gap==null?'–':(gap>=0?'+':'')+gap+' pts'}</span><span class="what">si completan Connect (<b>${pc(m3[0].p)}</b>) vs si nunca entraron (<b>${pc(m3[2].p)}</b>)</span></div>
+     ${GR.map(([n],i)=>{const x=m3[i];return `<div class="frow sm click" onclick="__cohPick('${seg}',${i})" title="Ver su escalera por cohorte"><div>${n}</div><div class="ftrack"><div class="fbar" style="width:${x.p||0}%;background:${i===0?'var(--brand)':'var(--s4)'}"></div></div><div class="fnum">${x.p==null?`<span class="sub">pocos casos</span>`:`<b>${pc(x.p)}</b>`} <span class="sub">n=${x.n.toLocaleString('es')}</span></div></div>`}).join('')}</div>`});
+  const stair=`<div class="card" style="margin-top:12px"><h3>Retención por cohorte · mes en que empezó a pagar</h3><div id="cohBox">${__cohHTML()}</div></div><div class="card" style="margin-top:12px" id="zoomBox">${__zoomHTML()}</div>`;
+  const act=DATA.act,AF=act?act.filas.filter(x=>f.seg==='Todos'||x.seg===f.seg):[];
+  const qs=[...new Set(AF.map(x=>x.q))];
+  return `<div class="grid two">${blocks.join('')}</div>${stair}
+  <div class="card" style="margin-top:12px"><h3>¿Activan lo que cerramos? ${info('Empresa del caso cerrado con al menos 1 evento de valor entre el inicio del trimestre de cierre y 30 días después. Base de referencia: 84% (junio 2026).')}</h3>
+   ${qs.map(q=>{const x=AF.filter(y=>y.q===q);return `<div class="frow sm"><div><b>${q.replace(' (en curso)','')}</b>${/curso/.test(q)?'<div class="sub">en curso</div>':''}</div><div>${x.map(y=>{const p=100*y.a/y.n,s=stOf(p,BASE_ACT);return `<div class="actr"><span class="sub" style="width:70px;display:inline-block">${y.seg}</span><div class="ftrack"><div class="fbar" style="width:${p}%"></div><div class="goal" style="left:${BASE_ACT}%" title="base ${BASE_ACT}%"></div></div><span><span class="ico ${s}">${ICO[s]}</span> <b>${Math.round(p)}%</b> <span class="sub">${y.a}/${y.n}</span></span></div>`}).join('')}</div><div></div></div>`}).join('')}
+   <div class="legend" style="margin-top:6px"><span><i style="background:var(--ink);width:2px"></i>base ${BASE_ACT}%</span><span>Corte ${act?act.corte:'–'} · Metabase · todos los países</span></div></div>
+  <details class="card" style="margin-top:12px"><summary><b>Churn a 3 meses del cierre, por trimestre</b> <span class="sub">(tabla)</span></summary>
+   ${table([{h:'Trimestre',f:x=>x.trimestre},{h:'Segmento',f:x=>x.segmento,l:1},{h:'Cerradas',f:x=>x.empresas},{h:'Pagaban al cierre',f:x=>x.base_pagaba_al_cierre},{h:'Churn 3m',f:x=>x.churn_3m_pct?`<b>${x.churn_3m_pct}%</b>`:'<span class="sub">en maduración</span>'},{h:'Churn total a hoy',f:x=>x.churn_pct+'%'}],R.cascada)}
+   <div class="note">Retención: corte ${R.corte} · churn: ${R.corteCascada}. No se refresca sola: pide “refresca retención de Connect”.</div></details>`;
+};
+
+// ===== Lista para actuar =====
+VIEWS.lista=f=>{
+  const rs=base(f).filter(r=>r.open).sort((a,b)=>b.alN-a.alN||(b.dEt||0)-(a.dEt||0));window.__lista=rs;
+  const cnt=Object.keys(VENC).map(k=>({k,n:rs.filter(r=>venc(r)===k).length}));const old=rs.filter(r=>r.p==='O'&&r.al).length;
+  return `<div class="chips"><button class="chipb" data-al="">Todos <b>${rs.length}</b></button>${cnt.map(x=>`<button class="chipb" data-al="${esc(VENC[x.k][2])}"><span class="ico ${x.n?'bad':'good'}">${x.n?'✕':'✓'}</span>${VENC[x.k][0]} <b>${x.n}</b> <span class="sub">${VENC[x.k][1]}</span></button>`).join('')}<button class="chipb" data-al="Backlog viejo > 60 días">Pipeline viejo > 60 días <b>${old}</b></button>
+   <span class="sp"></span><input id="lQ" placeholder="Buscar cliente o ID"><button id="lCsv">Descargar CSV</button></div>
+  <div class="card" id="lTab"></div>`;
+};
+HOOKS.lista=()=>{
+  let a=window.__preAl||'';window.__preAl='';
+  const draw=()=>{const q=$('lQ').value.toLowerCase();document.querySelectorAll('.chipb').forEach(b=>b.classList.toggle('on',b.dataset.al===a));
+    const x=window.__lista.filter(r=>(!a||(r.al||'').includes(a))&&(!q||(r.n+' '+r.id+' '+r.idc).toLowerCase().includes(q)));window.__listaF=x;
+    $('lTab').innerHTML=table([{h:'Caso',f:r=>`<a href="${HS(r.id)}" target="_blank" rel="noopener">${esc(r.n||r.id)}</a>`,l:1},{h:'País',f:r=>r.pa},{h:'Segmento',f:r=>r.seg},{h:'Analista',f:r=>esc(r.ow||'—'),l:1},{h:'Etapa',f:r=>LAB[r.st],l:1},
+      {h:'Días háb. en etapa',f:r=>f0(r.dEt)},{h:'Alerta',f:r=>r.al?`<span class="stt ${r.alN>=2?'bad':'warn'}"><i>${r.alN>=2?'✕':'!'}</i>${esc(r.al)}</span>`:'',l:1},{h:'Le toca a',f:r=>r.alD||'',l:1}],x.slice(0,600))+(x.length>600?`<div class="note">Mostrando 600 de ${x.length}. Descarga el CSV para verlos todos.</div>`:'')};
+  document.querySelectorAll('.chipb').forEach(b=>b.onclick=()=>{a=b.dataset.al;draw()});$('lQ').oninput=draw;draw();
+  $('lCsv').onclick=()=>{const h=['id','cliente','pais','segmento','analista','pipeline','etapa','dias_habiles_en_etapa','ingreso','alerta','link'];
+    const L=[h.join(',')].concat(window.__listaF.map(r=>[r.id,r.n,r.pa,r.seg,r.ow,r.p==='N'?'Adopcion New':'Viejo',LAB[r.st],r.dEt,r.ing,r.al,HS(r.id)].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')));
+    const b=new Blob(['﻿'+L.join('\n')],{type:'text/csv'});const u=URL.createObjectURL(b);const A=document.createElement('a');A.href=u;A.download='connect_abiertos_'+TODAY+'.csv';A.click()};
+};
+
+// ===== SLA =====
+const TRAMOS=[['T1','Working → Kick-off','Agendar','Sales',META_AGENDA],['T2','Kick-off → Solicitud de info','Dar la primera sesión','Adoption',null],['T3','Solicitud de info → Proceso de migración','Entregar la información','Sales / cliente',null],
+ ['T4','Proceso de migración → Ciclo de adopción','Migrar','Analista',META_MIG],['T5','Ciclo de adopción → Cierre','Capacitar y cerrar','Analista',null],['TT','Ingreso → Cierre','Ciclo completo','Todos',null]];
+VIEWS.sla=f=>{
+  const rs=base(f).filter(r=>r.p==='N'&&r.t);
+  const openAt={T1:'WORK',T2:'KICK',T3:'SOL',T4:'PROC',T5:'CIC'};
+  const rows=TRAMOS.map(([k,n,q,du,meta])=>{const x=rs.filter(r=>r.t[k]&&inR(f,r.t[k][2]));const b=x.map(r=>r.t[k][0]),c=x.map(r=>r.t[k][1]);
+    const ab=k!=='TT'?base(f).filter(r=>r.open&&r.p==='N'&&r.st===openAt[k]):[];const abF=meta?ab.filter(r=>bd(r.d[openAt[k]]||r.ing,TODAY)>meta).length:null;
+    return {k,n,q,du,meta,cnt:x.length,mb:med(b),p75:pct(b,.75),mc:med(c),ok:meta?b.filter(v=>v<=meta).length:null,ab:ab.length,abF}});
+  // SLA de migración: 3 bases, ambos pipelines (r.mig)
+  const B=base(f);
+  const ent=B.filter(r=>r.mig&&inR(f,r.mig[2])),entOk=ent.filter(r=>r.mig[0]<=META_MIG).length;
+  const cer=ent.filter(r=>r.st==='CIE'||r.st==='O_COMP'),cerOk=cer.filter(r=>r.mig[0]<=META_MIG).length;
+  const abV=B.filter(r=>r.venceD&&bd(r.venceD,TODAY)>META_MIG).length;
+  const porSrc=['OM','NP','NS'].map(s=>{const x=ent.filter(r=>r.mig[3]===s),b=x.map(r=>r.mig[0]);return{s,n:x.length,ok:b.filter(v=>v<=META_MIG).length,mb:med(b),cero:b.filter(v=>v===0).length}}).filter(x=>x.n);
+  // calidad del dato
+  const cier=B.filter(r=>r.p==='N'&&r.st==='CIE'&&inR(f,r.fin)),ruta=cier.filter(r=>r.d.PROC&&r.d.CIC).length,cero=ent.filter(r=>r.mig[0]===0).length,retro=B.filter(r=>r.p==='N'&&r.retro&&inR(f,r.fin||r.ncd)).length;
+  const oldC=B.filter(r=>r.p==='O'&&r.st==='O_COMP'&&inR(f,r.ff||r.fin)),oldImp=oldC.filter(r=>r.tp==='I').length,oldSin=oldC.filter(r=>r.tp==='?').length;
+  // tendencia mensual del SLA (por mes de entrega)
+  const ms=mesesR(f).filter(m=>m>='2026-07');const tr=ms.map(m=>{const x=B.filter(r=>r.mig&&mes(r.mig[2])===m).map(r=>r.mig[0]);return{m,med:med(x),ok:x.length?Math.round(100*x.filter(v=>v<=META_MIG).length/x.length):null,n:x.length}});
+  const buck=[['0',0,0],['1-2',1,2],['3-6',3,6],['7-10',7,10],['11-20',11,20],['21+',21,1e9]].map(([l,a,b])=>({l,v:ent.filter(r=>r.mig[0]>=a&&r.mig[0]<=b).length}));
+  // viejo: solicitud → Completada
+  const old=base(f).filter(r=>r.p==='O'&&r.fin&&inR(f,r.fin));const om=mesesR(f).map(m=>{const x=old.filter(r=>mes(r.fin)===m);return{m,b:med(x.map(r=>bd(r.ing,r.fin))),c:med(x.map(r=>cd(r.ing,r.fin))),n:x.length}}).filter(x=>x.n);
+  return `<div class="headline">SLA de migración (meta ${META_MIG} días hábiles desde que llega la información, ambos pipelines): <b>${fp(entOk,ent.length)}</b> sobre entregadas (n=${ent.length}),
+   <b>${fp(cerOk,cer.length)}</b> sobre cerradas y <b>${fp(entOk,ent.length+abV)}</b> en la base estricta, que suma los ${abV} abiertos ya vencidos.
+   ${oldImp||oldSin?`Del pipeline viejo quedan fuera ${oldImp} tickets de implementación${oldSin?` y ${oldSin} sin clasificar (el título no dice si es migración)`:''}.`:''}</div>
+  <div class="grid k">
+   ${kpi('Sobre entregadas',fp(entOk,ent.length),`${entOk} de ${ent.length} en ≤${META_MIG} d háb.`,'Migraciones entregadas en el periodo. Viejo: tickets de migración (por título) que llegaron a Completada, de la fecha de solicitud a la de finalización. Adopción New: entrada a Ciclo de adopción o Cierre, con reloj desde Proceso de migración (o desde Working si se saltó esa etapa).')}
+   ${kpi('Sobre cerradas',fp(cerOk,cer.length),`${cerOk} de ${cer.length}`,'De las entregadas, las que ya están en Cierre o Completada.')}
+   ${kpi('Base estricta',fp(entOk,ent.length+abV),`suma ${abV} abiertos vencidos`,'Entregadas en meta / (entregadas + abiertos de Adopción New que llevan más de 6 hábiles desde Solicitud de información o Proceso de migración). Los abiertos del pipeline viejo no vencen: no tienen esa etapa.')}
+   ${kpi('Calidad del dato',fp(ruta,cier.length),`de los cierres de Adopción New pasó por Proceso y Ciclo · ${cero} entregas en 0 días · ${retro} cargas retroactivas`,'Si la etapa no se mueve el día en que pasa, el SLA no se puede medir bien: un 0 suele ser un movimiento en lote al final.')}
+  </div>
+  <div class="card" style="margin-top:12px"><h3>¿De dónde sale el SLA? ${info('Cada fuente mide el reloj distinto; por eso se muestran por separado antes de sumarlas.')}</h3>
+   ${table([{h:'Fuente',f:x=>MIGSRC[x.s],l:1},{h:'Entregadas',f:x=>x.n},{h:'≤6 háb.',f:x=>`${x.ok} <span class="sub">${fp(x.ok,x.n)}</span>`},{h:'Mediana háb.',f:x=>f0(x.mb)},{h:'En 0 días',f:x=>x.cero}],porSrc)}</div>
+  <div class="card" style="margin-top:12px"><h3>Cada tramo del proceso y de quién es (solo Adopción New) ${info('Solo se mide un tramo cuando el caso tiene fecha de entrada a las dos etapas, por eso aquí hay menos casos que en el SLA de arriba. Días hábiles = lunes a viernes, sin festivos. Mes = mes en que terminó el tramo.')}</h3>
+   ${table([{h:'Tramo',f:x=>`<b>${x.q}</b><br><span class="sub">${x.n}</span>`,l:1},{h:'Dueño',f:x=>x.du,l:1},{h:'Medidos',f:x=>x.cnt},{h:'Mediana háb.',f:x=>f0(x.mb)},{h:'p75 háb.',f:x=>f0(x.p75)},{h:'Mediana calend.',f:x=>f0(x.mc)},
+     {h:'Meta',f:x=>x.meta?x.meta+' háb.':'sin meta'},{h:'% en meta',f:x=>x.meta?fp(x.ok,x.cnt):'–'},{h:'Abiertos ahora',f:x=>x.k==='TT'?'–':x.ab},{h:'Abiertos fuera de meta',f:x=>x.abF==null?'–':x.abF?`<span class="pill pbad">${x.abF}</span>`:'0'}],rows)}
+   <div class="note">Meta de agendar: 48 h hábiles (ajuste de Jhonatan del 17-oct; el CRO pidió 24 h el 22-sep). Meta de migración: 6 días hábiles desde que el cliente entrega la información.</div></div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h3>SLA de migración por mes de entrega</h3>${tr.some(x=>x.n)?line([{n:'% en ≤6 háb.',c:'var(--s1)',v:tr.map(x=>x.ok)},{n:'Mediana días háb.',c:'var(--s2)',v:tr.map(x=>x.med)}],tr.map(x=>mlab(x.m)+` (n=${x.n})`)):'<p class="sub">Sin entregas medibles.</p>'}</div>
+   <div class="card"><h3>¿Cuánto tarda la migración? (entregas del periodo)</h3>${bars([{n:'Casos',c:'var(--s1)',v:buck.map(b=>b.v)}],buck.map(b=>b.l+' d'))}</div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Pipeline viejo: de la solicitud a Completada ${info('Cota superior: Completada incluye migración + capacitación.')}</h3>
+   ${table([{h:'Mes de cierre',f:x=>mlab(x.m)},{h:'Cerradas',f:x=>x.n},{h:'Mediana hábiles',f:x=>f0(x.b)},{h:'Mediana calendario',f:x=>f0(x.c)}],om)}</div>`;
+};
+
+// ===== Cómo se mide =====
+VIEWS.def=f=>{
+  const cnt={};DATA.recs.forEach(r=>{const k=(r.p==='N'?'Adopción New (915721075)':'Viejo · Alegra Connect (690980478)')+'|'+LAB[r.st];cnt[k]=(cnt[k]||0)+1});
+  const rows=Object.entries(cnt).map(([k,v])=>({p:k.split('|')[0],e:k.split('|')[1],v}));
+  return `<div class="grid two"><div class="card"><h3>Definiciones</h3><table>
+  ${[['Universo','Pipeline nuevo: casos que llegaron a Working o más allá (plan elegible, o creados por KAM/POD/calendario). La bandeja New (todo primer pago que no califica) se muestra aparte y no es universo. Pipeline viejo: todas sus solicitudes 2026.'],
+    ['Fecha de ingreso','Nuevo: primera entrada a Working o a una etapa posterior. Viejo: fecha de solicitud. Nunca hs_createdate en el pipeline nuevo.'],
+    ['Cerrado / mes de cierre','Entrada a Cierre (nuevo) o a Completada (viejo). No se usa fecha_de_finalizacion porque es manual y en 1 de cada 3 casos es anterior a la entrada real.'],
+    ['Embudo','Un caso “pasó” una etapa si entró a ella o está en una posterior (las etapas no retroceden). Excluye cargas retroactivas (creadas directo en Cierre / No completado).'],
+    ['Tramos y dueños','Working→Kick-off = Sales (meta 48 h hábiles). Kick-off→Solicitud = Adoption. Solicitud→Proceso = Sales/cliente. Proceso→Ciclo = analista (SLA 6 días hábiles). Ciclo→Cierre = analista.'],
+    ['SLA de migración, 3 bases','Ambos pipelines. Viejo: solo tickets de migración (el título lo dice; los de implementación quedan fuera), de la fecha de solicitud a la fecha de finalización. Adopción New: desde Proceso de migración (o desde Working si se saltó esa etapa) hasta Ciclo de adopción o Cierre. Entregadas, cerradas (de esas, las que ya están en Cierre/Completada) y estricta (entregadas + abiertos de Adopción New con más de 6 hábiles desde Solicitud de información). Mismo método del tablero TMS México (21/29-oct).'],
+    ['Alertas','Sin agendar >48 h hábiles en Working · Esperando info >6 hábiles en Solicitud · SLA de migración vencido (>6 hábiles en Proceso) · Ciclo >15 hábiles · Sin owner desde Kick-off · Pipeline viejo abierto >60 días.'],
+    ['Días hábiles','Lunes a viernes, sin festivos por país. Se muestran también días calendario donde aplica.'],
+    ['Mes en curso','Siempre parcial. Las comparaciones contra el mes anterior se hacen a la misma altura del mes.'],
+    ['Activación y retención','Vienen de Metabase con el método de datos/connect_retencion/metodo_retencion_connect.md; no se refrescan con HubSpot.']]
+   .map(([a,b])=>`<tr><td class="l" style="white-space:normal;vertical-align:top"><b>${a}</b></td><td class="l" style="white-space:normal">${b}</td></tr>`).join('')}</table></div>
+  <div class="card"><h3>Cuadre contra HubSpot ${info('Conteo total de registros 2026 por pipeline y etapa, sin filtros. Debe coincidir con la vista de HubSpot del objeto Alegra Connect filtrando por fecha de creación 2026.')}</h3>
+   ${table([{h:'Pipeline',f:x=>x.p,l:1},{h:'Etapa',f:x=>x.e,l:1},{h:'Registros',f:x=>x.v}],rows)}<div class="note">Total: ${DATA.recs.length} registros creados desde el 1-ene-2026. Corte ${DATA.corte}.</div></div></div>`;
+};
+render();
+</script>
+</body>
+</html>

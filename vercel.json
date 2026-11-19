@@ -1,6 +1,11 @@
 {
-  "crons": [{ "path": "/api/refresh", "schedule": "0 11 * * *" }],
+  "crons": [
+    { "path": "/api/connect/refresh", "schedule": "0 11 * * *" },
+    { "path": "/api/refresh", "schedule": "5 11 * * *" }
+  ],
   "functions": {
-    "app/api/refresh/route.js": { "maxDuration": 60 }
+    "app/api/refresh/route.js": { "maxDuration": 60 },
+    "app/api/connect/refresh/route.js": { "maxDuration": 60 },
+    "app/connect/route.js": { "maxDuration": 60 }
   }
 }

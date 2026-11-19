@@ -9,3 +9,6 @@
 # Artefactos del build estático (el index.html de la raíz SÍ se versiona:
 # es lo que Dashboards Hub lee del repo)
 dist-hub/
+
+dist-snapshots/
+.env*.local

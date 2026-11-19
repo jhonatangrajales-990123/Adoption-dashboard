@@ -1,5 +1,6 @@
 import { fetchRecords } from '@/lib/hubspot';
 import { saveData } from '@/lib/store';
+import { sesionValida, secretoValido } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -7,17 +8,10 @@ export const maxDuration = 60;
 
 export async function GET(req) {
   try {
-    // Si hay REFRESH_SECRET, exigirlo (para proteger el cron). El cron de Vercel
-    // puede pasarlo como ?secret= o via header Authorization.
-    const secret = process.env.REFRESH_SECRET;
-    if (secret) {
-      const url = new URL(req.url);
-      const provided = url.searchParams.get('secret') || (req.headers.get('authorization') || '').replace('Bearer ', '');
-      // Vercel Cron manda un header especial; lo aceptamos también.
-      const isVercelCron = !!req.headers.get('x-vercel-cron');
-      if (provided !== secret && !isVercelCron) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-      }
+    // Entra quien traiga el secreto del cron (CRON_SECRET, que Vercel envía solo, o REFRESH_SECRET)
+    // o quien tenga sesión iniciada (botón "Actualizar ahora"). Sin ninguna de las dos: 401.
+    if (!secretoValido(req, ['CRON_SECRET', 'REFRESH_SECRET']) && !(await sesionValida(req))) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const token = process.env.HUBSPOT_TOKEN;
@@ -40,7 +34,7 @@ export async function GET(req) {
     });
   } catch (err) {
     console.error('Refresh error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'No se pudo actualizar' }, { status: 500 });
   }
 }
 

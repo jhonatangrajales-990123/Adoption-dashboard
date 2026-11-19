@@ -1,3 +1,41 @@
+# Adoption · Medición
+
+Dos tableros en una sola app, detrás de la misma contraseña:
+
+| Ruta | Qué es |
+|---|---|
+| `/connect` | **Alegra Connect · tablero integral** (Resumen, Embudo y fugas, SLA y tiempos, Equipo, Retención, Lista para actuar, Cómo se mide) |
+| `/` | **Adoption Explorer**: explorador de tickets, desempeño y activación (descrito más abajo) |
+
+## Tablero de Connect (`/connect`)
+
+Los datos tienen dos orígenes y cada uno trae su fecha de corte:
+
+| Pieza | De dónde sale | Cómo se actualiza |
+|---|---|---|
+| Tickets (embudo, SLA, equipo) | HubSpot, en vivo desde el servidor | Cron diario 11:00 UTC (6 a.m. Bogotá), botón o `GET /api/connect/refresh` |
+| Retención y activación | Metabase (solo se consulta con el conector del agente) | El agente las calcula y las sube: `scripts/connect/exportar-snapshots.cjs` y luego `scripts/connect/subir-snapshots.ps1` |
+
+Código: `lib/connect/normalizar.js` (todas las reglas de negocio, probadas con `scripts/connect/verificar-normalizar.mjs`),
+`lib/connect/hubspot.js` (descarga), `lib/connect/store.js` (KV con respaldo en memoria),
+`lib/connect/template.html` (la vista; calcula las métricas en el navegador), `app/connect/route.js` (inyecta los datos).
+
+### Variables de entorno (Vercel → Settings → Environment Variables)
+
+| Variable | Obligatoria | Para qué |
+|---|---|---|
+| `HUBSPOT_TOKEN` | Sí | Token de la private app de HubSpot (solo servidor) |
+| `ADOPTION_PASSWORD` | Sí | Contraseña del equipo. Sin ella el sitio responde 503 (cerrado a propósito) |
+| `CRON_SECRET` | Sí | Secreto del cron; Vercel lo envía solo. Sin él, solo refresca quien tenga sesión |
+| `CONNECT_TOKEN` | Para subir retención/activación | Token del agente en `/api/connect/snapshot` |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Recomendadas | Los pone Vercel al conectar el KV; sin KV los datos se pierden al reiniciar |
+
+Seguridad: la cookie de sesión guarda una huella (SHA-256), no la contraseña; las rutas de servicio
+(`/api/refresh`, `/api/connect/refresh`, `/api/connect/snapshot`) exigen secreto o sesión y quedan cerradas
+si el secreto no existe; no hay claves en el repo.
+
+---
+
 # Adoption Explorer
 
 Dashboard interactivo de tickets de Adoption (pipeline HubSpot `690980478`).

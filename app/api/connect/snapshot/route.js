@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { guardar, cargar } from '@/lib/connect/store';
 import { secretoValido } from '@/lib/auth';
-import { modoAlmacen } from '@/lib/kvstore';
+import { modoAlmacen, errorAlmacen } from '@/lib/kvstore';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +33,7 @@ export async function GET(req) {
   const [recs, ret, act, actA] = await Promise.all(['recs', 'ret', 'act', 'actA'].map(cargar));
   return NextResponse.json({
     almacen: modoAlmacen(), // 'redis' / 'kv' = los datos persisten; 'memoria' = se pierden al reiniciar
+    errorAlmacen: errorAlmacen(),
     recs: recs ? { corte: recs.corte, registros: recs.recs.length } : null,
     ret: ret ? { corte: ret.corte, mensual: ret.mensual?.corte } : null,
     act: act ? { filas: act.filas.length } : null,
